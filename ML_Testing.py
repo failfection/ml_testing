@@ -1,4 +1,6 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.ShowBaseGlobal import globalClock
+import math
 
 keymap = {
     "forward": False,
@@ -22,7 +24,13 @@ class MainGame(ShowBase):
         #MAIN PLAYER/CHARACTER
         self.player = self.loader.loadModel('models/my models/sphere.bam')
         self.player.reparentTo(self.render)
+        self.player.setPos(10, 30, 0)
         self.cam.setPos(0, -100, 10)
+
+        self.cam.reparentTo(self.player)
+        self.cam.setPos(0, 2, 5)
+        self.cam.setH(180)
+        self.cam.setP(-20)
 
         #OBSTACLES TO KEEP TRACK OF MOVEMENT
         self.obstacle = self.loader.loadModel('models/jack')
@@ -48,24 +56,32 @@ class MainGame(ShowBase):
 
         self.accept("space", updatekeymap, ["rotate", True])
         self.accept("space-up", updatekeymap, ["rotate", False])
+
+
         self.value = 0
 
         # RUN UPDATE FUNCTIONS HERE
-        self.taskMgr.add(self.camerapositioning)
+        # self.taskMgr.add(self.camerapositioning)
         self.taskMgr.add(self.movePanda)
+        self.taskMgr.add(self.mouse_position)
 
-    def camerapositioning(self, task):
-        self.cam.reparentTo(self.player)
-        self.cam.setPos(0, 15, 5)
-        self.cam.setH(180)
-        self.cam.setP(-20)
-        return task.cont
+        #Other Variables
+        self.mousespeed = 50;
+
+    # def camerapositioning(self, task):
+    #     self.cam.reparentTo(self.player)
+    #     self.cam.setPos(0, 2, 5)
+    #     self.cam.setH(180)
+    #     self.cam.setP(-20)
+    #     return task.cont
 
     def movePanda(self, task):
         if keymap["forward"]:
+            print(self.player.getForward())
             pos = self.player.getPos()
             pos.y -= 0.3
             self.player.setPos(pos)
+            self.player.setFluidPos()
 
         if keymap["backward"]:
             pos = self.player.getPos()
@@ -87,6 +103,21 @@ class MainGame(ShowBase):
             self.value += 1
 
         return task.cont
+
+    def mouse_position(self, task):
+        if self.mouseWatcherNode.hasMouse():
+            dt = globalClock.getDt()
+            self.mouse_x = 0
+            self.mouse_y = 0
+
+            self.mouse_x = self.mouseWatcherNode.getMouseX() * self.mousespeed
+            self.mouse_y = self.mouseWatcherNode.getMouseY() * self.mousespeed
+            # print(mouse_x)
+
+            self.player.setH(-1 * self.mouse_x)
+            # self.player.setH(math.atan2(y,x)*57.29578+90)
+        return task.cont
+
 
 testgame = MainGame()
 testgame.run()
