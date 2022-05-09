@@ -10,6 +10,7 @@ keymap = {
     "rotate": False
 }
 
+
 def updatekeymap(key, state):
     keymap[key] = state
 
@@ -17,11 +18,12 @@ def updatekeymap(key, state):
 class MainGame(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+        self.disableMouse()
         self.surroundings = self.loader.loadModel('models/my models/ground.bam')
         self.surroundings.reparentTo(self.render)
         self.surroundings.setPos(0, 0, -2)
 
-        #MAIN PLAYER/CHARACTER
+        # MAIN PLAYER/CHARACTER
         self.player = self.loader.loadModel('models/my models/sphere.bam')
         self.player.reparentTo(self.render)
         self.player.setPos(10, 30, 0)
@@ -32,7 +34,7 @@ class MainGame(ShowBase):
         self.cam.setH(180)
         self.cam.setP(-20)
 
-        #OBSTACLES TO KEEP TRACK OF MOVEMENT
+        # OBSTACLES TO KEEP TRACK OF MOVEMENT
         self.obstacle = self.loader.loadModel('models/jack')
         self.obstacle.reparentTo(self.render)
         self.obstacle.setPos(5, 0, 0)
@@ -57,16 +59,17 @@ class MainGame(ShowBase):
         self.accept("space", updatekeymap, ["rotate", True])
         self.accept("space-up", updatekeymap, ["rotate", False])
 
-
-        self.value = 0
-
         # RUN UPDATE FUNCTIONS HERE
         # self.taskMgr.add(self.camerapositioning)
         self.taskMgr.add(self.movePanda)
         self.taskMgr.add(self.mouse_position)
 
-        #Other Variables
+        # Other Variables
         self.mousespeed = 50;
+        self.rotate_value = 0
+        self.mouse_x = 0
+        self.mouse_y = 0
+        self.playerspeed = 20
 
     # def camerapositioning(self, task):
     #     self.cam.reparentTo(self.player)
@@ -76,39 +79,29 @@ class MainGame(ShowBase):
     #     return task.cont
 
     def movePanda(self, task):
+        dt = globalClock.getDt()
+
         if keymap["forward"]:
-            print(self.player.getForward())
-            pos = self.player.getPos()
-            pos.y -= 0.3
-            self.player.setPos(pos)
-            self.player.setFluidPos()
+            self.player.setY(self.player, -self.playerspeed * dt)
 
         if keymap["backward"]:
-            pos = self.player.getPos()
-            pos.y += 0.3
-            self.player.setPos(pos)
+            self.player.setY(self.player, self.playerspeed * dt)
 
         if keymap["strife_left"]:
-            pos = self.player.getPos()
-            pos.x += 0.3
-            self.player.setPos(pos)
+            self.player.setX(self.player, self.playerspeed * dt)
 
         if keymap["strife_right"]:
-            pos = self.player.getPos()
-            pos.x -= 0.3
-            self.player.setPos(pos)
+            self.player.setX(self.player, -self.playerspeed * dt)
 
         if keymap["rotate"]:
-            self.player.setH(self.value)
-            self.value += 1
+            self.player.setH(self.rotate_value)
+            self.rotate_value += 1
 
         return task.cont
 
     def mouse_position(self, task):
         if self.mouseWatcherNode.hasMouse():
             dt = globalClock.getDt()
-            self.mouse_x = 0
-            self.mouse_y = 0
 
             self.mouse_x = self.mouseWatcherNode.getMouseX() * self.mousespeed
             self.mouse_y = self.mouseWatcherNode.getMouseY() * self.mousespeed
