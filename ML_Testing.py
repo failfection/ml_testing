@@ -1,7 +1,15 @@
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBaseGlobal import globalClock
+from panda3d.core import load_prc_file_data
 import math
 
+confvars = """
+
+cursor-hidden true
+
+"""
+
+load_prc_file_data("", confvars)
 keymap = {
     "forward": False,
     "backward": False,
@@ -18,6 +26,7 @@ def updatekeymap(key, state):
 class MainGame(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+
         self.disableMouse()
         self.surroundings = self.loader.loadModel('models/my models/ground.bam')
         self.surroundings.reparentTo(self.render)
@@ -59,24 +68,32 @@ class MainGame(ShowBase):
         self.accept("space", updatekeymap, ["rotate", True])
         self.accept("space-up", updatekeymap, ["rotate", False])
 
-        # RUN UPDATE FUNCTIONS HERE
-        # self.taskMgr.add(self.camerapositioning)
-        self.taskMgr.add(self.movePanda)
-        self.taskMgr.add(self.mouse_position)
-
         # Other Variables
-        self.mousespeed = 50;
+        self.mousespeed = 1000;
         self.rotate_value = 0
         self.mouse_x = 0
         self.mouse_y = 0
         self.playerspeed = 20
 
-    # def camerapositioning(self, task):
-    #     self.cam.reparentTo(self.player)
-    #     self.cam.setPos(0, 2, 5)
-    #     self.cam.setH(180)
-    #     self.cam.setP(-20)
-    #     return task.cont
+
+        # RUN UPDATE FUNCTIONS HERE
+        # self.taskMgr.add(self.camerapositioning)
+        self.taskMgr.add(self.movePanda)
+        self.taskMgr.add(self.MouseControl)
+
+    def MouseControl(self, task):
+        if self.mouseWatcherNode.hasMouse():
+            dt = globalClock.getDt()
+            mw = self.mouseWatcherNode
+            x, y = mw.getMouseX(), mw.getMouseY()
+
+            # move mouse back to center
+            props = self.win.getProperties()
+            self.win.movePointer(0,
+                                 props.getXSize() // 2,
+                                 props.getYSize() // 2)
+            self.player.setH(self.player, -1 * x * dt * self.mousespeed)
+        return task.cont
 
     def movePanda(self, task):
         dt = globalClock.getDt()
@@ -97,18 +114,6 @@ class MainGame(ShowBase):
             self.player.setH(self.rotate_value)
             self.rotate_value += 1
 
-        return task.cont
-
-    def mouse_position(self, task):
-        if self.mouseWatcherNode.hasMouse():
-            dt = globalClock.getDt()
-
-            self.mouse_x = self.mouseWatcherNode.getMouseX() * self.mousespeed
-            self.mouse_y = self.mouseWatcherNode.getMouseY() * self.mousespeed
-            # print(mouse_x)
-
-            self.player.setH(-1 * self.mouse_x)
-            # self.player.setH(math.atan2(y,x)*57.29578+90)
         return task.cont
 
 
