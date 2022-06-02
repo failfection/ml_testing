@@ -1,8 +1,14 @@
+from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase, CollisionSphere
 from direct.showbase.ShowBaseGlobal import globalClock
+from direct.showbase.InputStateGlobal import InputState
 from panda3d.core import *
 from panda3d.bullet import *
+from panda3d.physics import *
+
 import math
+
+from panda3d.physics import ActorNode
 
 confvars = """
 
@@ -11,22 +17,11 @@ cursor-hidden true
 """
 
 load_prc_file_data("", confvars)
-keymap = {
-    "forward": False,
-    "backward": False,
-    "strife_left": False,
-    "strife_right": False,
-    "rotate": False
-}
-
-
-def updatekeymap(key, state):
-    keymap[key] = state
-
 
 class MainGame(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+        self.disableMouse()
 
         self.bullet_world = BulletWorld()
         self.bullet_world.setGravity(Vec3(0, 0, -9.81))
@@ -36,10 +31,34 @@ class MainGame(ShowBase):
         self.debug.showWireframe(True)
         self.debug.showConstraints(True)
         self.debugNP = self.render.attachNewNode(self.debug)
+        self.debugNP.setColor(3,4,2,1)
         self.debugNP.show()
         self.bullet_world.setDebugNode(self.debugNP.node())
 
-        self.disableMouse()
+        # MAIN PLAYER/CHARACTER
+
+        # Step 1 = Create Shape
+        self.height = 1.75
+        self.radius = 1
+        self.bulletCapShape = BulletCapsuleShape(self.radius, self.height - 2 * self.radius, ZUp)
+
+        # Step 2 - Create Character Controller
+        self.player = self.loader.loadModel('models/my models/sphere.bam')
+        self.playerBulletCharContNode = BulletCharacterControllerNode(self.bulletCapShape, 0.4, 'player')
+        self.playerNP = self.render.attachNewNode(self.playerBulletCharContNode)
+        self.playerNP.setCollideMask(BitMask32.allOn())
+        self.playerNP.setColor(1,1,1,1)
+        self.playerNP.setPos(0, 0, 20)
+        self.player.reparentTo(self.playerNP)
+        self.player.setPos(0,0,-1)
+        self.bullet_world.attachCharacter(self.playerBulletCharContNode)
+
+        inputState.watchWithModifiers('forward', 'w')
+        inputState.watchWithModifiers('backward', 's')
+        inputState.watchWithModifiers('left', 'a')
+        inputState.watchWithModifiers('right', 'd')
+        inputState.watchWithModifiers('turnRight', 'space')
+
         self.ground = self.loader.loadModel('models/my models/ground.bam')
         self.groundShape = BulletPlaneShape(Vec3(0, 0, 1), 3)
         self.groundRigidbody = BulletRigidBodyNode('ground')
@@ -48,18 +67,6 @@ class MainGame(ShowBase):
         self.groundNP = self.render.attachNewNode(self.groundRigidbody)
         self.groundNP.setPos(0, 0, -2)
         self.ground.reparentTo(self.groundNP)
-
-        # MAIN PLAYER/CHARACTER
-        self.player = self.loader.loadModel('models/my models/sphere.bam')
-        self.playerShape = BulletSphereShape(1)
-        self.playerRigdbodyNode = BulletRigidBodyNode('player')
-        self.playerRigdbodyNode.add_shape(self.playerShape)
-        self.playerRigdbodyNode.setMass(1)
-        self.bullet_world.attachRigidBody(self.playerRigdbodyNode)
-        self.playerNP = self.render.attachNewNode(self.playerRigdbodyNode)
-        self.playerNP.setPos(0, 0, 10)
-        self.player.setPos(0, 0, 0)
-        self.player.reparentTo(self.playerNP)
 
         # OBSTACLES TO KEEP TRACK OF MOVEMENT
         self.obstacle1 = self.loader.loadModel('models/jack')
@@ -72,38 +79,29 @@ class MainGame(ShowBase):
         self.obstacle1NP.setPos(5, 0, 1)
         self.obstacle1NP.setColor(1, 2, 4, 3)
 
+        # GHOST
         self.obstacle2 = self.loader.loadModel('models/jack')
-        self.obstacle_2_Shape = BulletSphereShape(2)
-        self.obstacle_2_RigidbodyNode = BulletRigidBodyNode('obs2')
-        self.obstacle_2_RigidbodyNode.add_shape(self.obstacle_2_Shape)
-        self.obstacle2NP = self.render.attachNewNode(self.obstacle_2_RigidbodyNode)
-        self.bullet_world.attachRigidBody(self.obstacle_2_RigidbodyNode)
-        self.obstacle2.reparentTo(self.obstacle2NP)
-        self.obstacle2NP.setColor(1, 2, 4, 3)
-        self.obstacle2NP.setPos(15, 15, 5)
+        self.obstacle_2_Shape = BulletSphereShape(1)
+        self.obstacle2Ghost = BulletGhostNode('ob2Ghost')
+        self.obstacle2Ghost.addShape(self.obstacle_2_Shape)
+        self.obstacle2GhostNP = self.render.attachNewNode(self.obstacle2Ghost)
+        self.obstacle2GhostNP.setCollideMask(BitMask32(0x0f))
+        self.bullet_world.attachGhost(self.obstacle2Ghost)
+        self.obstacle2.reparentTo(self.obstacle2GhostNP)
+        self.obstacle2GhostNP.setPos(1,15, 1)
+        self.obstacle2GhostNP.setColor(1, 2, 4, 3)
 
         # self.cam.setPos(0, -100, 10)
         self.cam.reparentTo(self.playerNP)
         # # self.cam.setPos(0, 2, 5) / Temporarily disabling this so we can see the collisions happen
-        self.cam.setPos(0, 20, 8)
-        self.cam.setH(180)
+        self.cam.setPos(0, -20, 5)
+        #self.cam.setH(90)
         self.cam.setP(-20)
 
         # KEYBOARD INPUT
-        self.accept("w", updatekeymap, ["forward", True])
-        self.accept("w-up", updatekeymap, ["forward", False])
-
-        self.accept("s", updatekeymap, ["backward", True])
-        self.accept("s-up", updatekeymap, ["backward", False])
-
-        self.accept("a", updatekeymap, ["strife_left", True])
-        self.accept("a-up", updatekeymap, ["strife_left", False])
-
-        self.accept("d", updatekeymap, ["strife_right", True])
-        self.accept("d-up", updatekeymap, ["strife_right", False])
 
         # Other Variables
-        self.mousespeed = 1000;
+        self.mousespeed = 1000
         self.rotate_value = 0
         self.mouse_x = 0
         self.mouse_y = 0
@@ -111,27 +109,41 @@ class MainGame(ShowBase):
 
         # RUN UPDATE FUNCTIONS HERE
 
-        self.taskMgr.add(self.movePanda)
         self.taskMgr.add(self.MouseControl)
-        self.taskMgr.add(self.applyGravity)
-        self.taskMgr.add(self.checkingRaycasting)
+        self.taskMgr.add(self.update)
+        self.taskMgr.add(self.checkGhost)
 
-    def checkingRaycasting(self, task):
-        self.pFrom = Point3(0, 0, 0)
-        self.pTo = Point3(3, 0, 0)
-        self.result = self.bullet_world.rayTestClosest(self.pFrom, self.pTo)
+    def checkGhost(self, task):
+        ghost = self.obstacle2GhostNP.node()
+        if ghost.getNumOverlappingNodes():
+            # print(ghost.getNumOverlappingNodes())
+            for node in ghost.getOverlappingNodes():
+                if node.getName() == "player":
+                    print(node.getName())
+                    return
 
-        if self.result.hasHit():
-            print(self.result.hasHit())
-            print(self.result.getHitPos())
-            print(self.result.getHitNormal())
-            print(self.result.getHitFraction())
-            print(self.result.getNode())
         return task.cont
 
-    def applyGravity(self, task):
+    def processInput(self, dt):
+        speed = Vec3(0, 0, 0)
+        omega = 0.0
+
+        if inputState.isSet('forward'): speed.setY(10.0)
+        if inputState.isSet('backward'): speed.setY(-10.0)
+        if inputState.isSet('left'):    speed.setX(-10.0)
+        if inputState.isSet('right'):   speed.setX(10.0)
+        if inputState.isSet('turnLeft'):  omega = 20.0
+        if inputState.isSet('turnRight'): omega = -20.0
+
+        self.playerBulletCharContNode.setAngularMovement(omega)
+        self.playerBulletCharContNode.setLinearMovement(speed, True)
+
+    def update(self, task):
         dt = globalClock.getDt()
-        self.bullet_world.doPhysics(dt)
+
+        self.processInput(dt)
+        self.bullet_world.doPhysics(dt, 4, 1. / 240.)
+
         return task.cont
 
     def MouseControl(self, task):
@@ -142,27 +154,9 @@ class MainGame(ShowBase):
 
             # move mouse back to center
             props = self.win.getProperties()
-            self.win.movePointer(0,
-                                 props.getXSize() // 2,
-                                 props.getYSize() // 2)
-            self.playerNP.setHpr(self.playerNP, -1 * x * dt * self.mousespeed)
-        return task.cont
-
-    def movePanda(self, task):
-        dt = globalClock.getDt()
-
-        if keymap["forward"]:
-            self.playerNP.setY(self.playerNP, -self.playerspeed * dt)
-
-        if keymap["backward"]:
-            self.playerNP.setY(self.playerNP, self.playerspeed * dt)
-
-        if keymap["strife_left"]:
-            self.playerNP.setX(self.playerNP, self.playerspeed * dt)
-
-        if keymap["strife_right"]:
-            self.playerNP.setX(self.playerNP, -self.playerspeed * dt)
-
+            self.win.movePointer(0, props.getXSize() // 2, props.getYSize() // 2)
+            self.playerNP.setH(self.playerNP, -1 * x * dt * self.mousespeed)
+            self.cam.setP(self.cam, 1 * y * dt * self.mousespeed)
         return task.cont
 
 
