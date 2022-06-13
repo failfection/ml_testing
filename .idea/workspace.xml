@@ -50,7 +50,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="settings.editor.selected.configurable" value="preferences.editor" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunManager" selected="Python.ML_Testing">
     <configuration name="BulletTesting" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
@@ -95,6 +95,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="TestMultiPass" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ml_testing" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/TestMultiPass.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="anotherTest" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ml_testing" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -108,27 +129,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/anotherTest.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="side" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="ml_testing" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/side.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -161,10 +161,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.ML_Testing" />
+        <item itemvalue="Python.TestMultiPass" />
         <item itemvalue="Python.testingPhysics" />
         <item itemvalue="Python.anotherTest" />
         <item itemvalue="Python.BulletTesting" />
-        <item itemvalue="Python.side" />
       </list>
     </recent_temporary>
   </component>
@@ -204,26 +204,26 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state width="1515" height="207" key="GridCell.Tab.0.bottom" timestamp="1654209500448">
+    <state width="1515" height="303" key="GridCell.Tab.0.bottom" timestamp="1655145061657">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="1515" height="207" key="GridCell.Tab.0.bottom/0.0.1536.824/-1366.121.1366.728@0.0.1536.824" timestamp="1654150238258" />
-    <state width="1515" height="207" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1654209500448" />
-    <state width="1515" height="207" key="GridCell.Tab.0.center" timestamp="1654209500448">
+    <state width="1515" height="303" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1655145061657" />
+    <state width="1515" height="303" key="GridCell.Tab.0.center" timestamp="1655145061657">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="1515" height="207" key="GridCell.Tab.0.center/0.0.1536.824/-1366.121.1366.728@0.0.1536.824" timestamp="1654150238258" />
-    <state width="1515" height="207" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1654209500448" />
-    <state width="1515" height="207" key="GridCell.Tab.0.left" timestamp="1654209500448">
+    <state width="1515" height="303" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1655145061657" />
+    <state width="1515" height="303" key="GridCell.Tab.0.left" timestamp="1655145061657">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="1515" height="207" key="GridCell.Tab.0.left/0.0.1536.824/-1366.121.1366.728@0.0.1536.824" timestamp="1654150238258" />
-    <state width="1515" height="207" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1654209500448" />
-    <state width="1515" height="207" key="GridCell.Tab.0.right" timestamp="1654209500448">
+    <state width="1515" height="303" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1655145061657" />
+    <state width="1515" height="303" key="GridCell.Tab.0.right" timestamp="1655145061657">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="1515" height="207" key="GridCell.Tab.0.right/0.0.1536.824/-1366.121.1366.728@0.0.1536.824" timestamp="1654150238258" />
-    <state width="1515" height="207" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1654209500448" />
+    <state width="1515" height="303" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1655145061657" />
     <state width="1515" height="261" key="GridCell.Tab.1.bottom" timestamp="1652026092622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -240,10 +240,11 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="1515" height="261" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1652026092622" />
-    <state x="142" y="0" key="SettingsEditor" timestamp="1652365620274">
-      <screen x="0" y="0" width="1280" height="680" />
+    <state x="170" y="0" key="SettingsEditor" timestamp="1655144604753">
+      <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="142" y="0" key="SettingsEditor/0.0.1280.680@0.0.1280.680" timestamp="1652365620274" />
+    <state x="170" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1655144604753" />
     <state x="431" y="145" width="672" height="678" key="search.everywhere.popup" timestamp="1653272064003">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
