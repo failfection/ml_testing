@@ -1,11 +1,14 @@
 from direct.showbase.InputStateGlobal import inputState
-from direct.showbase.ShowBase import ShowBase, CollisionSphere
+from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBaseGlobal import globalClock
 from direct.showbase.InputStateGlobal import InputState
 from panda3d.core import *
 from panda3d.bullet import *
 from panda3d.physics import *
 import numpy as np
+import cv2
+import sys
+
 
 import math
 
@@ -32,7 +35,7 @@ class MainGame(ShowBase):
         self.debug.showConstraints(True)
         self.debugNP = self.render.attachNewNode(self.debug)
         self.debugNP.setColor(3,4,2,1)
-        self.debugNP.show()
+        #self.debugNP.show()
         self.bullet_world.setDebugNode(self.debugNP.node())
 
         # MAIN PLAYER/CHARACTER
@@ -74,6 +77,7 @@ class MainGame(ShowBase):
         inputState.watchWithModifiers('right', 'd')
         inputState.watchWithModifiers('turnRight', 'space')
         inputState.watchWithModifiers('switchPlayer', 'p')
+        inputState.watchWithModifiers('detectObject', 't')
 
         self.ground = self.loader.loadModel('models/my models/ground.bam')
         self.groundShape = BulletPlaneShape(Vec3(0, 0, 1), 3)
@@ -121,18 +125,16 @@ class MainGame(ShowBase):
         # self.camera_one_NP.removeNode()
 
         # CAM 1
-        #Create Camera Node
+        # Create Camera Node
         self.camera_one = Camera("camera_one")
-        #Create Texture Buffer
+        # Create Texture Buffer
         self.camera_one_buffer = self.win.makeTextureBuffer('buffer_one', 700, 500)
-        #Clear bufer
+        # Clear bufer
         self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-        #use Buffer as Camera
+        # use Buffer as Camera
         self.cam1 = self.makeCamera(self.camera_one_buffer)
         self.cam1.reparentTo(self.player1NP)
-        self.cam1.setPos(0, -40, 7)
-
-        self.camera_one_buffer.saveScreenshot("koboko/myscreenshot.jpg")
+        self.cam1.setPos(0, 0, 3)
 
         # Create a pair of cards to display the contents of these buffer
         self.camera_one_Card = CardMaker('left')
@@ -149,7 +151,7 @@ class MainGame(ShowBase):
         self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
         self.cam2 = self.makeCamera(self.camera_two_buffer)
         self.cam2.reparentTo(self.player2NP)
-        self.cam2.setPos(0, -40, 7)
+        self.cam2.setPos(0, 0, 7)
 
         # Create a pair of cards to display the contents of these buffer
         # overlayed with the main window.
@@ -175,6 +177,8 @@ class MainGame(ShowBase):
 
         print(self.camList)
 
+        # print(self.mainScreenshot)
+        # print("EENNNNNNNNNNNNDDDDD")
 
         # Other Variables
         self.mousespeed = 1000
@@ -205,7 +209,7 @@ class MainGame(ShowBase):
         speed = Vec3(0, 0, 0)
         omega = 0.0
 
-        if inputState.isSet('forward'): speed.setY(10.0)
+        if inputState.isSet('forward'):speed.setY(10.0)
         if inputState.isSet('backward'): speed.setY(-10.0)
         if inputState.isSet('left'):    speed.setX(-10.0)
         if inputState.isSet('right'):   speed.setX(10.0)
@@ -216,21 +220,26 @@ class MainGame(ShowBase):
                 self.isPLayer1Active = False;
             elif self.isPLayer1Active == False:
                 self.isPLayer1Active = True;
+        if inputState.isSet('detectObject'):
+            self.detectOtherPlayer()
 
         if self.isPLayer1Active == True:
             # CAMERA
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.dr.setCamera(self.cam1)
-            self.dr.saveScreenshot("bigapple444.jpg")
-            self.ourScreenshot = self.dr.getScreenshot()
-            self.ourScData = self.ourScreenshot.getRamImage()
-            self.mv = memoryview(self.ourScData).tolist()
+            #self.dr.saveScreenshot("bigapple444.jpg")
+            # self.dr.saveScreenshotDefault("bigapple444.jpg")
+            # self.ourScreenshot = self.dr.getScreenshot()
+            # self.ourScData = self.ourScreenshot.getRamImage()
+            # self.mv = memoryview(self.ourScData).tolist()
+            #
+            # self.numpyImg = np.array(self.mv, dtype=np.uint8)
+            # self.numpyImg = self.numpyImg.reshape((self.ourScreenshot.getYSize(), self.ourScreenshot.getXSize(), 4))
+            # self.numpyImg  = self.numpyImg[::-1]
+            # print(self.numpyImg)
 
-            self.numpyImg = np.array(self.mv, dtype=np.uint8)
-            self.numpyImg = self.numpyImg.reshape((self.ourScreenshot.getYSize(), self.ourScreenshot.getXSize(), 4))
-            self.numpyImg  = self.numpyImg[::-1]
-            print(self.numpyImg)
+
 
 
 
@@ -243,8 +252,8 @@ class MainGame(ShowBase):
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.dr.setCamera(self.cam2)
-            self.dr.saveScreenshot("bigapple333.jpg")
-            self.dr.getScreenshot()
+            # self.dr.saveScreenshot("bigapple333.jpg")
+            # self.dr.getScreenshot()
 
             # self.camera_one_np.reparentTo(self.player2NP)
             # MOVEMENT
@@ -267,16 +276,62 @@ class MainGame(ShowBase):
             x, y = mw.getMouseX(), mw.getMouseY()
 
             # move mouse back to center
-            # props = self.win.getProperties()
-            # self.win.movePointer(0, props.getXSize() // 2, props.getYSize() // 2)
+            props = self.win.getProperties()
+            self.win.movePointer(0, props.getXSize() // 2, props.getYSize() // 2)
             # self.camera_one_np.setP(self.camera_one_np, 1 * y * dt * self.mousespeed)
 
-            # if self.isPLayer1Active == True:
-            #     self.player1NP.setH(self.player1NP, -1 * x * dt * self.mousespeed)
-            # elif self.isPLayer1Active == False:
-            #     self.player2NP.setH(self.player2NP, -1 * x * dt * self.mousespeed)
+            if self.isPLayer1Active == True:
+                self.player1NP.setH(self.player1NP, -1 * x * dt * self.mousespeed)
+            elif self.isPLayer1Active == False:
+                self.player2NP.setH(self.player2NP, -1 * x * dt * self.mousespeed)
 
         return task.cont
+
+    def detectOtherPlayer(self):
+        # OpenCV
+
+        #Send Screenshot as a numpy array to OpenCV so we use it as our image
+
+        self.ourScreenshot =  self.dr.getScreenshot()
+        self.ourScRawData = self.ourScreenshot.getRamImage()
+        self.mv = memoryview(self.ourScRawData).tolist()
+
+        self.numpyImg = np.array(self.mv, dtype=np.uint8)
+        self.numpyImg = self.numpyImg.reshape((self.ourScreenshot.getYSize(), self.ourScreenshot.getXSize(), 4))
+        self.numpyImg = self.numpyImg[::-1]
+
+        # load image
+        self.mainScreenshot = self.numpyImg  # cv2.imread('screenshot.jpg', 0) ##
+        self.mainScreenshot_GRAYSCALE = cv2.cvtColor(self.mainScreenshot, 1)
+        self.mytemp =cv2.imread('Images for OpenCV/Blue Ball Sample.jpg') # cv2.imread('Images for OpenCV/Blue Ball Sample.jpg', 0)
+        h, w, c = self.mytemp.shape
+
+        # # took this method out , cv2.TM_CCORR
+
+        methods = [cv2.TM_CCOEFF, cv2.TM_CCOEFF_NORMED,
+                   cv2.TM_CCORR_NORMED, cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]
+
+        for method in methods:
+            self.scCopy = self.mainScreenshot_GRAYSCALE.copy()
+            result = cv2.matchTemplate(self.scCopy, self.mytemp, method)
+            print(result)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+                location = min_loc
+            else:
+                location = max_loc
+
+            bottom_right = (location[0] + w, location[1] + h)
+
+            cv2.rectangle(self.scCopy, location, bottom_right, 255, 5)
+            # print (min_loc, max_loc)
+            cv2.imshow('Template Match', self.scCopy)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
+
 
 
 testgame = MainGame()
