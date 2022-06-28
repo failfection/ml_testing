@@ -221,7 +221,39 @@ class MainGame(ShowBase):
             elif self.isPLayer1Active == False:
                 self.isPLayer1Active = True;
         if inputState.isSet('detectObject'):
-            self.detectOtherPlayer()
+
+            cap = cv2.VideoCapture('Test Video.mp4')
+            print(type(cap))
+            ret, frame1 = cap.read()
+            ret, frame2 = cap.read()
+            while cap.isOpened():
+                # ret, frame = cap.read()
+                diff = cv2.absdiff(frame1, frame2)
+                # converting from color to gray because it is easy to find contour in grayscale mode
+                gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+                blur = cv2.GaussianBlur(gray, (5, 5), 0)
+                # Threshold makes sure something is either full black or full white, based on threshold defined
+                _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+                dilated = cv2.dilate(threshold, None, iterations=3)
+                _, contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                #cv2.drawContours(frame1, contours, -1, (0, 255, 0), 2)
+                for contour in contours:
+                    (x, y, w, h) = cv2.boundingRect(contour)
+                    if cv2.contourArea(contour) < 1200:
+                        continue
+                    cv2.rectangle(frame1, (x,y), (x+w, y+h), (0, 255, 0), 2)
+                    cv2.putText(frame1, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
+                                1, (0, 0, 255), 3)
+                cv2.imshow('hi', frame1)
+                frame1 = frame2
+                ret, frame2 = cap.read()
+
+                if cv2.waitKey(1) == ord('q'):
+                    cv2.destroyAllWindows()
+                    cap.release()
+                    break
+
+
 
         if self.isPLayer1Active == True:
             # CAMERA
@@ -238,9 +270,6 @@ class MainGame(ShowBase):
             # self.numpyImg = self.numpyImg.reshape((self.ourScreenshot.getYSize(), self.ourScreenshot.getXSize(), 4))
             # self.numpyImg  = self.numpyImg[::-1]
             # print(self.numpyImg)
-
-
-
 
 
             # self.camera_one_np.reparentTo(self.player1NP)
@@ -306,29 +335,34 @@ class MainGame(ShowBase):
         self.mytemp =cv2.imread('Images for OpenCV/Blue Ball Sample.jpg') # cv2.imread('Images for OpenCV/Blue Ball Sample.jpg', 0)
         h, w, c = self.mytemp.shape
 
-        # # took this method out , cv2.TM_CCORR
+        # # took this method out , cv2.TM_CCORR, it almost never gave good results
 
-        methods = [cv2.TM_CCOEFF, cv2.TM_CCOEFF_NORMED,
-                   cv2.TM_CCORR_NORMED, cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]
+        # methods = [cv2.TM_CCOEFF, cv2.TM_CCOEFF_NORMED,
+        #            cv2.TM_CCORR_NORMED, cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]
+        self.ourMethod = cv2.TM_CCOEFF_NORMED
 
-        for method in methods:
-            self.scCopy = self.mainScreenshot_GRAYSCALE.copy()
-            result = cv2.matchTemplate(self.scCopy, self.mytemp, method)
-            print(result)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        self.scCopy = self.mainScreenshot_GRAYSCALE.copy()
+        result = cv2.matchTemplate(self.scCopy, self.mytemp, self.ourMethod)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+        print(cv2.minMaxLoc(result))
+        #
+        # if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+        #     drawRectangle_start_top_left = min_loc
+        # else:
+        drawRectangle_start_top_left = max_loc
 
-            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
-                location = min_loc
-            else:
-                location = max_loc
 
-            bottom_right = (location[0] + w, location[1] + h)
+        bottom_right = (drawRectangle_start_top_left[0] + w, drawRectangle_start_top_left[1] + h)
 
-            cv2.rectangle(self.scCopy, location, bottom_right, 255, 5)
-            # print (min_loc, max_loc)
-            cv2.imshow('Template Match', self.scCopy)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        # print("top left")
+        # print(drawRectangle_start_top_left[0])
+        # print(drawRectangle_start_top_left[1])
+
+        cv2.rectangle(self.scCopy, drawRectangle_start_top_left, bottom_right, 255, 5)
+        # print (min_loc, max_loc)
+        cv2.imshow('Template Match', self.scCopy)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 
@@ -336,3 +370,11 @@ class MainGame(ShowBase):
 
 testgame = MainGame()
 testgame.run()
+
+"""[[[192 178 158][202 187 163][233 208 176][222 202 185][151 141 131]]
+
+   [[179 177 153][173 166 151][177 168 159][159 154 145][109 105  97]]
+
+   [[115 122 127][ 98 102 107][ 74  88  95][ 58  83  81][ 84  83  74]]]"""
+
+
