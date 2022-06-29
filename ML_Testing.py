@@ -193,6 +193,8 @@ class MainGame(ShowBase):
         self.taskMgr.add(self.update)
         self.taskMgr.add(self.checkGhost)
 
+
+
     def checkGhost(self, task):
         ghost = self.obstacle2GhostNP.node()
         if ghost.getNumOverlappingNodes():
@@ -203,6 +205,36 @@ class MainGame(ShowBase):
                     return
 
         return task.cont
+
+    def getContour(self, dilatedimg, imgcontour):
+        _, contours, hierarchy = cv2.findContours(dilatedimg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        for cnt in contours:
+            """Find total area of contour and if it is bigger than a certain number, display the contour
+            this is done to further reduce noise"""
+            area = cv2.contourArea(cnt)
+            print(area)
+            areaMin = cv2.getTrackbarPos("Area", "SliderWindow")
+            if area >areaMin:
+                cv2.drawContours(imgcontour, cnt, -1, (255, 0, 255), 7)
+                #perimeter: find out if contour is closed or not
+                peri = cv2.arcLength(cnt, True)
+                #Approx will tell us what shape this is depending on perimeter
+                #takes in contour, resolution, True means its a closed contour
+                #it returns number of points for us to determine the shape based on points
+                approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+                print(len(approx))
+                #we do not always get a fixed amount of points for a certain shape. Bounding solves that
+                #It basically draws a box that the object fits in
+                x,y, w, h = cv2.boundingRect(approx)
+                cv2.rectangle(imgcontour, (x, y), (x+w, y+h), (0,255,0), 5)
+                #Label bounding box
+                #displayon, points, position of text font scale color thickness
+                cv2.putText(imgcontour, "Points: " + str(len(approx)), (x+w +20, y+20), cv2.FONT_HERSHEY_SIMPLEX, .7,
+                            (0, 255, 0), 2)
+                cv2.putText(imgcontour, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_SIMPLEX,
+                            .7,
+                            (0, 255, 0), 2)
 
     def processInput(self, dt):
 
@@ -222,11 +254,18 @@ class MainGame(ShowBase):
                 self.isPLayer1Active = True;
         if inputState.isSet('detectObject'):
 
+            cv2.namedWindow("SliderWindow")
+            cv2.resizeWindow("SliderWindow", 640,240)
+            cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
+            cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
+            cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
+
             cap = cv2.VideoCapture('Test Video.mp4')
             print(type(cap))
             ret, frame1 = cap.read()
             ret, frame2 = cap.read()
             while cap.isOpened():
+                imgcontour = frame2.copy()
                 # ret, frame = cap.read()
                 diff = cv2.absdiff(frame1, frame2)
                 # converting from color to gray because it is easy to find contour in grayscale mode
@@ -234,17 +273,15 @@ class MainGame(ShowBase):
                 blur = cv2.GaussianBlur(gray, (5, 5), 0)
                 # Threshold makes sure something is either full black or full white, based on threshold defined
                 _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-                dilated = cv2.dilate(threshold, None, iterations=3)
-                _, contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                #cv2.drawContours(frame1, contours, -1, (0, 255, 0), 2)
-                for contour in contours:
-                    (x, y, w, h) = cv2.boundingRect(contour)
-                    if cv2.contourArea(contour) < 1200:
-                        continue
-                    cv2.rectangle(frame1, (x,y), (x+w, y+h), (0, 255, 0), 2)
-                    cv2.putText(frame1, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
-                                1, (0, 0, 255), 3)
-                cv2.imshow('hi', frame1)
+                dilated = cv2.dilate(threshold, (5, 5), iterations=3)
+
+                threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
+                threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
+                imgCanny = cv2.Canny(dilated, threshold1, threshold2)
+
+                self.getContour(dilated, imgcontour)
+
+                cv2.imshow('Final Result', imgcontour)
                 frame1 = frame2
                 ret, frame2 = cap.read()
 
@@ -315,6 +352,11 @@ class MainGame(ShowBase):
                 self.player2NP.setH(self.player2NP, -1 * x * dt * self.mousespeed)
 
         return task.cont
+
+    def empty(self,x):
+        pass
+
+
 
     def detectOtherPlayer(self):
         # OpenCV
