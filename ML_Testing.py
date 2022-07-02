@@ -8,10 +8,7 @@ from panda3d.physics import *
 import numpy as np
 import cv2
 import sys
-
-
 import math
-
 from panda3d.physics import ActorNode
 
 confvars = """
@@ -111,18 +108,9 @@ class MainGame(ShowBase):
         self.obstacle2GhostNP.setPos(1,15, 1)
         self.obstacle2GhostNP.setColor(1, 2, 4, 3)
 
-        # Create a pair of offscreen buffers in which to view the "left"
-        # and "right" eyes.
+        # Create a pair of offscreen buffers for each player/ball
+
         self.camNode.setActive(0)
-
-        # self.camera_one = Camera("camera_one")
-        # self.camera_one_NP = self.render.attachNewNode(self.camera_one)
-        # self.region = self.win.makeDisplayRegion()
-        # self.region.setCamera(self.camera_one_NP)
-
-        # View render, as seen by the default camera
-        # self.camera_one_NP.reparentTo(self.cam)
-        # self.camera_one_NP.removeNode()
 
         # CAM 1
         # Create Camera Node
@@ -162,9 +150,6 @@ class MainGame(ShowBase):
         self.camera_two_CardNP.setTransparency(1)
         self.camera_two_CardNP.setTexture(self.camera_two_buffer.getTexture())
 
-        #
-
-
         # Turn off the main camera, so we don't get them in triplicate.
 
         #Choose Which Camera is associated with the Display Region
@@ -176,9 +161,6 @@ class MainGame(ShowBase):
         self.camNode.setActive(0)
 
         print(self.camList)
-
-        # print(self.mainScreenshot)
-        # print("EENNNNNNNNNNNNDDDDD")
 
         # Other Variables
         self.mousespeed = 1000
@@ -236,6 +218,7 @@ class MainGame(ShowBase):
                             .7,
                             (0, 255, 0), 2)
 
+
     def processInput(self, dt):
 
         speed = Vec3(0, 0, 0)
@@ -253,42 +236,9 @@ class MainGame(ShowBase):
             elif self.isPLayer1Active == False:
                 self.isPLayer1Active = True;
         if inputState.isSet('detectObject'):
+            # self.templateMatchingScreenshot()
+            self.objectDetection()
 
-            cv2.namedWindow("SliderWindow")
-            cv2.resizeWindow("SliderWindow", 640,240)
-            cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
-            cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
-            cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
-
-            cap = cv2.VideoCapture('Test Video.mp4')
-            print(type(cap))
-            ret, frame1 = cap.read()
-            ret, frame2 = cap.read()
-            while cap.isOpened():
-                imgcontour = frame2.copy()
-                # ret, frame = cap.read()
-                diff = cv2.absdiff(frame1, frame2)
-                # converting from color to gray because it is easy to find contour in grayscale mode
-                gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-                blur = cv2.GaussianBlur(gray, (5, 5), 0)
-                # Threshold makes sure something is either full black or full white, based on threshold defined
-                _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-                dilated = cv2.dilate(threshold, (5, 5), iterations=3)
-
-                threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
-                threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
-                imgCanny = cv2.Canny(dilated, threshold1, threshold2)
-
-                self.getContour(dilated, imgcontour)
-
-                cv2.imshow('Final Result', imgcontour)
-                frame1 = frame2
-                ret, frame2 = cap.read()
-
-                if cv2.waitKey(1) == ord('q'):
-                    cv2.destroyAllWindows()
-                    cap.release()
-                    break
 
 
 
@@ -318,14 +268,47 @@ class MainGame(ShowBase):
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.dr.setCamera(self.cam2)
-            # self.dr.saveScreenshot("bigapple333.jpg")
-            # self.dr.getScreenshot()
 
             # self.camera_one_np.reparentTo(self.player2NP)
             # MOVEMENT
             self.player2BulletCharContNode.setAngularMovement(omega)
             self.player2BulletCharContNode.setLinearMovement(speed, True)
 
+    def objectDetection(self):
+        cv2.namedWindow("SliderWindow")
+        cv2.resizeWindow("SliderWindow", 640, 240)
+        cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
+        cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
+        cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
+
+        cap = cv2.VideoCapture('Test Video.mp4')
+        ret, frame1 = cap.read()
+        ret, frame2 = cap.read()
+        while cap.isOpened():
+            imgcontour = frame2.copy()
+            # ret, frame = cap.read()
+            diff = cv2.absdiff(frame1, frame2)
+            # converting from color to gray because it is easy to find contour in grayscale mode
+            gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (5, 5), 0)
+            # Threshold makes sure something is either full black or full white, based on threshold defined
+            _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+            dilated = cv2.dilate(threshold, (5, 5), iterations=3)
+
+            threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
+            threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
+            imgCanny = cv2.Canny(dilated, threshold1, threshold2)
+
+            self.getContour(dilated, imgcontour)
+
+            cv2.imshow('Final Result', imgcontour)
+            frame1 = frame2
+            ret, frame2 = cap.read()
+
+            if cv2.waitKey(1) == ord('q'):
+                cv2.destroyAllWindows()
+                cap.release()
+                break
 
     def update(self, task):
         dt = globalClock.getDt()
@@ -353,12 +336,10 @@ class MainGame(ShowBase):
 
         return task.cont
 
-    def empty(self,x):
+    def empty(self, x):
         pass
 
-
-
-    def detectOtherPlayer(self):
+    def templateMatchingScreenshot(self):
         # OpenCV
 
         #Send Screenshot as a numpy array to OpenCV so we use it as our image
@@ -393,12 +374,7 @@ class MainGame(ShowBase):
         # else:
         drawRectangle_start_top_left = max_loc
 
-
         bottom_right = (drawRectangle_start_top_left[0] + w, drawRectangle_start_top_left[1] + h)
-
-        # print("top left")
-        # print(drawRectangle_start_top_left[0])
-        # print(drawRectangle_start_top_left[1])
 
         cv2.rectangle(self.scCopy, drawRectangle_start_top_left, bottom_right, 255, 5)
         # print (min_loc, max_loc)
@@ -407,16 +383,5 @@ class MainGame(ShowBase):
         cv2.destroyAllWindows()
 
 
-
-
-
 testgame = MainGame()
 testgame.run()
-
-"""[[[192 178 158][202 187 163][233 208 176][222 202 185][151 141 131]]
-
-   [[179 177 153][173 166 151][177 168 159][159 154 145][109 105  97]]
-
-   [[115 122 127][ 98 102 107][ 74  88  95][ 58  83  81][ 84  83  74]]]"""
-
-
