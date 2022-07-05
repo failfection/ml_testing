@@ -344,12 +344,17 @@ class MainGame(ShowBase):
             # cv2.drawContours(frame1, contours, -1, (0, 255, 0), 2)
             for contour in contours:
                 (x, y, w, h) = cv2.boundingRect(contour)
+                print(x)
+                print(y)
+                print(w)
+                print(h)
+                return
                 if cv2.contourArea(contour) < 1200:
                     continue
                 cv2.rectangle(frame1, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(frame1, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
                             1, (0, 0, 255), 3)
-            cv2.imshow('hi', frame1)
+            cv2.imshow('hi', gray)
             frame1 = frame2
             ret, frame2 = cap.read()
 

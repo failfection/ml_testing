@@ -10,7 +10,7 @@ import numpy as np
 import cv2
 import sys
 import math
-from panda3d.physics import ActorNode
+import time
 
 confvars = """
 
@@ -52,7 +52,7 @@ class MainGame(ShowBase):
         self.player1NP = self.render.attachNewNode(self.player1BulletCharContNode)
         self.player1NP.setCollideMask(BitMask32.allOn())
         self.player1NP.setColor(1, 1, 1, 1)
-        self.player1NP.setPos(0, 0, 20)
+        self.player1NP.setPos(0, -50, 20)
         self.player1.reparentTo(self.player1NP)
         self.player1.setPos(0, 0, -1)
         self.bullet_world.attachCharacter(self.player1BulletCharContNode)
@@ -172,10 +172,23 @@ class MainGame(ShowBase):
         self.leftValue = 0
 
         # RUN UPDATE FUNCTIONS HERE
-
         self.taskMgr.add(self.MouseControl)
         self.taskMgr.add(self.update)
         self.taskMgr.add(self.checkGhost)
+        self.taskMgr.add(self.motionDetection)
+
+        #Store initial Value of Screenshot
+
+        self.ourScreenshot1 = self.dr.getScreenshot()
+        self.ourScData = self.ourScreenshot1.getRamImage()
+        self.mv = memoryview(self.ourScData).tolist()
+
+        self.numpyImg1 = np.array(self.mv, dtype=np.uint8)
+        self.numpyImg1 = self.numpyImg1.reshape(
+            (self.ourScreenshot1.getYSize(), self.ourScreenshot1.getXSize(), 4))
+        self.numpyImg1 = self.numpyImg1[::-1]
+
+        self.previous_frame = self.numpyImg1
 
 
 
@@ -222,7 +235,6 @@ class MainGame(ShowBase):
 
 
     def processInput(self, dt):
-
         speed = Vec3(0, 0, 0)
         omega = 0.0
 
@@ -238,16 +250,12 @@ class MainGame(ShowBase):
             elif self.isPLayer1Active == False:
                 self.isPLayer1Active = True;
         # if inputState.isSet('detectObject'):
-        #     # self.templateMatchingScreenshot()
-        #     # self.objectDetection()
-        #     # self.motionDetection()
 
         if self.isPLayer1Active == True:
             # CAMERA
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.dr.setCamera(self.cam1)
-            self.motionDetection()
 
             # print(self.numpyImg)
 
@@ -316,24 +324,23 @@ class MainGame(ShowBase):
                 cv2.destroyAllWindows()
                 cap.release()
                 break
-    def motionDetection(self):
-        # self.detectOtherPlayer()
+    def motionDetection(self, task):
+
         # cap = cv2.VideoCapture('Test Video 4.mp4')
 
-        self.ourScreenshot = self.dr.getScreenshot()
-        self.ourScData = self.ourScreenshot.getRamImage()
-        self.mv = memoryview(self.ourScData).tolist()
+        self.ourScreenshot2 = self.dr.getScreenshot()
+        self.ourScData2 = self.ourScreenshot2.getRamImage()
+        self.mv2 = memoryview(self.ourScData2).tolist()
 
-        self.numpyImgPlayer1 = np.array(self.mv, dtype=np.uint8)
-        self.numpyImgPlayer1 = self.numpyImgPlayer1.reshape(
-            (self.ourScreenshot.getYSize(), self.ourScreenshot.getXSize(), 4))
-        self.numpyImgPlayer1 = self.numpyImgPlayer1[::-1]
-
-        frame1 = self.numpyImgPlayer1
-        frame2 = self.numpyImgPlayer1
+        self.numpyImg2 = np.array(self.mv2, dtype=np.uint8)
+        self.numpyImg2 = self.numpyImg2.reshape(
+            (self.ourScreenshot2.getYSize(), self.ourScreenshot2.getXSize(), 4))
+        self.numpyImg2 = self.numpyImg2[::-1]
+        self.current_frame = self.numpyImg2
 
         # ret, frame = cap.read()
-        diff = cv2.absdiff(frame1, frame2)
+        diff = cv2.absdiff(self.previous_frame, self.current_frame)
+
         # converting from color to gray because it is easy to find contour in grayscale mode
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -342,30 +349,29 @@ class MainGame(ShowBase):
         dilated = cv2.dilate(threshold, None, iterations=3)
         _, contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        # cv2.imshow("hi", frame1)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        #
-        # cv2.imshow("hi2", frame2)
+        # cv2.drawContours(self.previous_frame, contours, -1, (0, 255, 0), 2)
+        for contour in contours:
+            (x, y, w, h) = cv2.boundingRect(contour)
+            print(x)
+            print(y)
+            print(w)
+            print(h)
+
+            if cv2.contourArea(contour) < 1200:
+                continue
+            cv2.rectangle(self.previous_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(self.previous_frame, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (0, 0, 255), 3)
+
+        # cv2.imshow('hi', self.previous_frame)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        # cv2.drawContours(frame1, contours, -1, (0, 255, 0), 2)
-        for contour in contours:
-            print("hiiii")
-            (x, y, w, h) = cv2.boundingRect(contour)
-            if cv2.contourArea(contour) < 1200:
-                continue
-            cv2.rectangle(frame1, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            # cv2.putText(frame1, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
-            #             1, (0, 0, 255), 3)
-        # cv2.imshow('hi', frame1)
-        frame1 = frame2
-        frame2 = self.numpyImgPlayer1
+        self.previous_frame = self.current_frame
 
         # if cv2.waitKey(1) == ord('q'):
         #     cv2.destroyAllWindows()
-        #     break
+        return task.cont
 
     def update(self, task):
         dt = globalClock.getDt()
