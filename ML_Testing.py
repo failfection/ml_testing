@@ -190,6 +190,7 @@ class MainGame(ShowBase):
 
         self.previous_frame = self.numpyImg1
 
+        self.runcount = 0
 
 
     def checkGhost(self, task):
@@ -289,41 +290,41 @@ class MainGame(ShowBase):
             self.player2BulletCharContNode.setAngularMovement(omega)
             self.player2BulletCharContNode.setLinearMovement(speed, True)
 
-    def objectDetection(self):
-        cv2.namedWindow("SliderWindow")
-        cv2.resizeWindow("SliderWindow", 640, 240)
-        cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
-        cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
-        cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
-
-        cap = cv2.VideoCapture('Test Video.mp4')
-        ret, frame1 = cap.read()
-        ret, frame2 = cap.read()
-        while cap.isOpened():
-            imgcontour = frame2.copy()
-            # ret, frame = cap.read()
-            diff = cv2.absdiff(frame1, frame2)
-            # converting from color to gray because it is easy to find contour in grayscale mode
-            gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (5, 5), 0)
-            # Threshold makes sure something is either full black or full white, based on threshold defined
-            _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-            dilated = cv2.dilate(threshold, (5, 5), iterations=3)
-
-            threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
-            threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
-            imgCanny = cv2.Canny(dilated, threshold1, threshold2)
-
-            self.getContour(dilated, imgcontour)
-
-            cv2.imshow('Final Result', imgcontour)
-            frame1 = frame2
-            ret, frame2 = cap.read()
-
-            if cv2.waitKey(1) == ord('q'):
-                cv2.destroyAllWindows()
-                cap.release()
-                break
+    # def objectDetection(self):
+    #     cv2.namedWindow("SliderWindow")
+    #     cv2.resizeWindow("SliderWindow", 640, 240)
+    #     cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
+    #     cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
+    #     cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
+    #
+    #     cap = cv2.VideoCapture('Test Video.mp4')
+    #     ret, frame1 = cap.read()
+    #     ret, frame2 = cap.read()
+    #     while cap.isOpened():
+    #         imgcontour = frame2.copy()
+    #         # ret, frame = cap.read()
+    #         diff = cv2.absdiff(frame1, frame2)
+    #         # converting from color to gray because it is easy to find contour in grayscale mode
+    #         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    #         blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    #         # Threshold makes sure something is either full black or full white, based on threshold defined
+    #         _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+    #         dilated = cv2.dilate(threshold, (5, 5), iterations=3)
+    #
+    #         threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
+    #         threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
+    #         imgCanny = cv2.Canny(dilated, threshold1, threshold2)
+    #
+    #         self.getContour(dilated, imgcontour)
+    #
+    #         cv2.imshow('Final Result', imgcontour)
+    #         frame1 = frame2
+    #         ret, frame2 = cap.read()
+    #
+    #         if cv2.waitKey(1) == ord('q'):
+    #             cv2.destroyAllWindows()
+    #             cap.release()
+    #             break
     def motionDetection(self, task):
 
         # cap = cv2.VideoCapture('Test Video 4.mp4')
@@ -337,10 +338,9 @@ class MainGame(ShowBase):
             (self.ourScreenshot2.getYSize(), self.ourScreenshot2.getXSize(), 4))
         self.numpyImg2 = self.numpyImg2[::-1]
         self.current_frame = self.numpyImg2
-
+        self.framecopy = self.current_frame.copy()
         # ret, frame = cap.read()
         diff = cv2.absdiff(self.previous_frame, self.current_frame)
-
         # converting from color to gray because it is easy to find contour in grayscale mode
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -350,27 +350,24 @@ class MainGame(ShowBase):
         _, contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         # cv2.drawContours(self.previous_frame, contours, -1, (0, 255, 0), 2)
+
         for contour in contours:
             (x, y, w, h) = cv2.boundingRect(contour)
-            print(x)
-            print(y)
-            print(w)
-            print(h)
-
-            if cv2.contourArea(contour) < 1200:
-                continue
-            cv2.rectangle(self.previous_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(self.previous_frame, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
-                        1, (0, 0, 255), 3)
-
-        # cv2.imshow('hi', self.previous_frame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+            # print("x=" + str(x) + " y=" + str(y))
+            if cv2.contourArea(contour) > 1200:
+                cv2.rectangle(self.framecopy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.putText(self.framecopy, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
+                1, (0, 0, 255), 3)
 
         self.previous_frame = self.current_frame
 
-        # if cv2.waitKey(1) == ord('q'):
-        #     cv2.destroyAllWindows()
+        cv2.imshow('hi', self.framecopy)
+        if cv2.waitKey(1) == ord('q'):
+            cv2.destroyAllWindows()
+            return
+
+
+
         return task.cont
 
     def update(self, task):
