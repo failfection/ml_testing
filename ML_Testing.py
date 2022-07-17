@@ -1,16 +1,13 @@
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBaseGlobal import globalClock
-from direct.interval.IntervalGlobal import Sequence
-from direct.showbase.InputStateGlobal import InputState
 from panda3d.core import *
+from panda3d.core import GraphicsWindow
 from panda3d.bullet import *
 from panda3d.physics import *
 import numpy as np
 import cv2
-import sys
-import math
-import time
+from direct.gui.OnscreenImage import OnscreenImage
 
 confvars = """
 
@@ -86,6 +83,8 @@ class MainGame(ShowBase):
         self.groundNP.setPos(0, 0, -2)
         self.ground.reparentTo(self.groundNP)
 
+
+
         # OBSTACLES TO KEEP TRACK OF MOVEMENT
         self.obstacle1 = self.loader.loadModel('models/jack')
         self.obstacle_1_Shape = BulletSphereShape(2)
@@ -136,11 +135,11 @@ class MainGame(ShowBase):
         # CAM 2
 
         self.camera_two = Camera("camera_two")
-        self.camera_two_buffer = self.win.makeTextureBuffer('buffer_two', 1000, 100)
+        self.camera_two_buffer = self.win.makeTextureBuffer('buffer_two', 700, 500)
         self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
         self.cam2 = self.makeCamera(self.camera_two_buffer)
         self.cam2.reparentTo(self.player2NP)
-        self.cam2.setPos(0, 0, 7)
+        self.cam2.setPos(0, -20, 3)
 
         # Create a pair of cards to display the contents of these buffer
         # overlayed with the main window.
@@ -153,15 +152,53 @@ class MainGame(ShowBase):
 
         # Turn off the main camera, so we don't get them in triplicate.
 
+        #Testing 2D render
+
+
+
         #Choose Which Camera is associated with the Display Region
-        self.dr = self.win.makeDisplayRegion()
+        self.dr = self.win.makeDisplayRegion(0, 0.5, 0.5, 1)
+        self.dr.setCamera(self.cam1)
 
         #self.dr.setCamera(self.cam1)
         # self.makeCamera(self.win, displayRegion=(0,1,0,1))
 
         self.camNode.setActive(0)
 
+        # CUBE
+
+        self.cube = self.loader.loadModel('models/my models/cube.bam')
+        self.cube.setScale(0.025, 0.025, 0.025)
+        # self.cube.reparentTo(self.render2dp)
+        # self.cube.setPos(0, 0, 0)
+
+        #RENDER 2D
+                                        # start, end, start, end
+        # self.dr2 = self.win.makeDisplayRegion(L, R, B, T)
+        self.dr2 = self.win.makeDisplayRegion(0.5, 1, 0, 1)
+        self.dr2.sort = 20
+
+        self.myCamera2d = NodePath(Camera('myCam2d'))
+        self.lens = OrthographicLens()
+        self.lens.setFilmSize(2, 2)
+        self.lens.setNearFar(-1000, 1000)
+        self.myCamera2d.node().setLens(self.lens)
+
+        self.myRender2d = NodePath('myRender2d')
+        self.myRender2d.setDepthTest(False)
+        self.myRender2d.setDepthWrite(False)
+        self.myCamera2d.reparentTo(self.myRender2d)
+        self.cube.reparentTo(self.myRender2d)
+        self.dr2.setCamera(self.myCamera2d)
+
         print(self.camList)
+
+
+        # cm = CardMaker('card')
+        # card = self.render2d.attachNewNode(cm.generate())
+        #
+        # tex = self.loader.loadTexture('maps/noise.rgb')
+        # card.setTexture(tex)
 
         # Other Variables
         self.mousespeed = 1000
@@ -170,6 +207,11 @@ class MainGame(ShowBase):
         self.mouse_y = 0
         self.playerspeed = 20
         self.leftValue = 0
+        self.screenpointX = 0
+        self.screenpointY = 0
+        self.cx = 0
+        self.cy = 0
+        self.move = 0.00
 
         # RUN UPDATE FUNCTIONS HERE
         self.taskMgr.add(self.MouseControl)
@@ -184,8 +226,8 @@ class MainGame(ShowBase):
         self.mv = memoryview(self.ourScData).tolist()
 
         self.numpyImg1 = np.array(self.mv, dtype=np.uint8)
-        self.numpyImg1 = self.numpyImg1.reshape(
-            (self.ourScreenshot1.getYSize(), self.ourScreenshot1.getXSize(), 4))
+        self.numpyImg1 = self.numpyImg1.reshape( (self.ourScreenshot1.getYSize(), self.ourScreenshot1.getXSize(), 4))
+        print("Screenshot Y Size" + str(self.ourScreenshot1.getXSize()))
         self.numpyImg1 = self.numpyImg1[::-1]
 
         self.previous_frame = self.numpyImg1
@@ -203,37 +245,6 @@ class MainGame(ShowBase):
                     return
 
         return task.cont
-
-    def getContour(self, dilatedimg, imgcontour):
-        _, contours, hierarchy = cv2.findContours(dilatedimg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        for cnt in contours:
-            """Find total area of contour and if it is bigger than a certain number, display the contour
-            this is done to further reduce noise"""
-            area = cv2.contourArea(cnt)
-            print(area)
-            areaMin = cv2.getTrackbarPos("Area", "SliderWindow")
-            if area >areaMin:
-                cv2.drawContours(imgcontour, cnt, -1, (255, 0, 255), 7)
-                #perimeter: find out if contour is closed or not
-                peri = cv2.arcLength(cnt, True)
-                #Approx will tell us what shape this is depending on perimeter
-                #takes in contour, resolution, True means its a closed contour
-                #it returns number of points for us to determine the shape based on points
-                approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-                print(len(approx))
-                #we do not always get a fixed amount of points for a certain shape. Bounding solves that
-                #It basically draws a box that the object fits in
-                x,y, w, h = cv2.boundingRect(approx)
-                cv2.rectangle(imgcontour, (x, y), (x+w, y+h), (0,255,0), 5)
-                #Label bounding box
-                #displayon, points, position of text font scale color thickness
-                cv2.putText(imgcontour, "Points: " + str(len(approx)), (x+w +20, y+20), cv2.FONT_HERSHEY_SIMPLEX, .7,
-                            (0, 255, 0), 2)
-                cv2.putText(imgcontour, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_SIMPLEX,
-                            .7,
-                            (0, 255, 0), 2)
-
 
     def processInput(self, dt):
         speed = Vec3(0, 0, 0)
@@ -256,7 +267,7 @@ class MainGame(ShowBase):
             # CAMERA
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            self.dr.setCamera(self.cam1)
+            # self.dr.setCamera(self.cam1)
 
             # print(self.numpyImg)
 
@@ -273,9 +284,9 @@ class MainGame(ShowBase):
 
             # print(self.leftValue)
             if 0 <= self.leftValue <= 3:
-                self.player2NP.setPos(self.player2NP, (5 * dt, 0, 0))
+                self.player2NP.setPos(self.player2NP, (2 * dt, 0, 0))
             elif 3 < self.leftValue <= 6:
-                self.player2NP.setPos(self.player2NP, (-5 * dt, 0, 0))
+                self.player2NP.setPos(self.player2NP, (-2 * dt, 0, 0))
             else:
                 self.leftValue = 0
 
@@ -290,41 +301,7 @@ class MainGame(ShowBase):
             self.player2BulletCharContNode.setAngularMovement(omega)
             self.player2BulletCharContNode.setLinearMovement(speed, True)
 
-    # def objectDetection(self):
-    #     cv2.namedWindow("SliderWindow")
-    #     cv2.resizeWindow("SliderWindow", 640, 240)
-    #     cv2.createTrackbar("Threshold1", "SliderWindow", 115, 255, self.empty)
-    #     cv2.createTrackbar("Threshold2", "SliderWindow", 48, 255, self.empty)
-    #     cv2.createTrackbar("Area", "SliderWindow", 5000, 30000, self.empty)
-    #
-    #     cap = cv2.VideoCapture('Test Video.mp4')
-    #     ret, frame1 = cap.read()
-    #     ret, frame2 = cap.read()
-    #     while cap.isOpened():
-    #         imgcontour = frame2.copy()
-    #         # ret, frame = cap.read()
-    #         diff = cv2.absdiff(frame1, frame2)
-    #         # converting from color to gray because it is easy to find contour in grayscale mode
-    #         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    #         blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    #         # Threshold makes sure something is either full black or full white, based on threshold defined
-    #         _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-    #         dilated = cv2.dilate(threshold, (5, 5), iterations=3)
-    #
-    #         threshold1 = cv2.getTrackbarPos("Threshold1", "SliderWindow")
-    #         threshold2 = cv2.getTrackbarPos("Threshold2", "SliderWindow")
-    #         imgCanny = cv2.Canny(dilated, threshold1, threshold2)
-    #
-    #         self.getContour(dilated, imgcontour)
-    #
-    #         cv2.imshow('Final Result', imgcontour)
-    #         frame1 = frame2
-    #         ret, frame2 = cap.read()
-    #
-    #         if cv2.waitKey(1) == ord('q'):
-    #             cv2.destroyAllWindows()
-    #             cap.release()
-    #             break
+
     def motionDetection(self, task):
 
         # cap = cv2.VideoCapture('Test Video 4.mp4')
@@ -359,6 +336,19 @@ class MainGame(ShowBase):
                 cv2.putText(self.framecopy, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
                 1, (0, 0, 255), 3)
 
+            M = cv2.moments(contour)
+            if M['m00'] != 0:
+                self.cx = int(M['m10'] / M['m00'])
+                self.cy = int(M['m01'] / M['m00'])
+                cv2.drawContours(self.framecopy, [contour], -1, (0, 255, 0), 1)
+                cv2.circle(self.framecopy, (self.cx, self.cy), 7, (0, 0, 255), -1)
+                cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+
+
+
+
+
         self.previous_frame = self.current_frame
 
         cv2.imshow('hi', self.framecopy)
@@ -366,15 +356,34 @@ class MainGame(ShowBase):
             cv2.destroyAllWindows()
             return
 
-
-
         return task.cont
+
+    def convertToScreen(self, x, y):
+        winWidth = self.win.getXSize()
+        winHeight= self.win.getYSize()
+
+        # print(winHeight, winWidth)
+        # print(winHeight, winWidth)
+
+
+        self.screenpointX = (self.cx * 1)/winWidth
+
+        self.screenpointY = (self.cy * 1)/winHeight
+
+        self.screenPoints = (self.screenpointX, 0, self.screenpointY)
+        # print(self.screenPoints)
+        return self.screenPoints
+
+
 
     def update(self, task):
         dt = globalClock.getDt()
 
         self.processInput(dt)
         self.bullet_world.doPhysics(dt, 4, 1. / 240.)
+        self.move+=0.002
+        #
+        self.cube.setX(self.move)
 
         return task.cont
 
