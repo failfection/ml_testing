@@ -30,7 +30,7 @@ class MainGame(ShowBase):
         self.debug.showConstraints(True)
         self.debugNP = self.render.attachNewNode(self.debug)
         self.debugNP.setColor(3,4,2,1)
-        #self.debugNP.show()
+        # self.debugNP.show()
         self.bullet_world.setDebugNode(self.debugNP.node())
 
         # MAIN PLAYER/CHARACTER
@@ -43,7 +43,7 @@ class MainGame(ShowBase):
         # Step 2 - Create Character Controller
         self.isPLayer1Active = True;
 
-        #PLAYER_ONE
+        # PLAYER_ONE
         self.player1 = self.loader.loadModel('models/my models/sphere.bam')
         self.player1BulletCharContNode = BulletCharacterControllerNode(self.bulletCapShape, 0.4, 'player1')
         self.player1NP = self.render.attachNewNode(self.player1BulletCharContNode)
@@ -54,7 +54,7 @@ class MainGame(ShowBase):
         self.player1.setPos(0, 0, -1)
         self.bullet_world.attachCharacter(self.player1BulletCharContNode)
 
-        #PLAYER_TWO
+        # PLAYER_TWO
 
         self.player2 = self.loader.loadModel('models/my models/sphere.bam')
         self.player2BulletCharContNode = BulletCharacterControllerNode(self.bulletCapShape, 0.4, 'player2')
@@ -82,8 +82,6 @@ class MainGame(ShowBase):
         self.groundNP = self.render.attachNewNode(self.groundRigidbody)
         self.groundNP.setPos(0, 0, -2)
         self.ground.reparentTo(self.groundNP)
-
-
 
         # OBSTACLES TO KEEP TRACK OF MOVEMENT
         self.obstacle1 = self.loader.loadModel('models/jack')
@@ -168,7 +166,7 @@ class MainGame(ShowBase):
         # CUBE
 
         self.cube = self.loader.loadModel('models/my models/cube.bam')
-        self.cube.setScale(0.025, 0.025, 0.025)
+        self.cube.setScale(0.010, 0.010, 0.010)
         # self.cube.reparentTo(self.render2dp)
         # self.cube.setPos(0, 0, 0)
 
@@ -193,13 +191,6 @@ class MainGame(ShowBase):
 
         print(self.camList)
 
-
-        # cm = CardMaker('card')
-        # card = self.render2d.attachNewNode(cm.generate())
-        #
-        # tex = self.loader.loadTexture('maps/noise.rgb')
-        # card.setTexture(tex)
-
         # Other Variables
         self.mousespeed = 1000
         self.rotate_value = 0
@@ -219,7 +210,7 @@ class MainGame(ShowBase):
         self.taskMgr.add(self.checkGhost)
         self.taskMgr.add(self.motionDetection)
 
-        #Store initial Value of Screenshot
+        # Store initial Value of Screenshot
 
         self.ourScreenshot1 = self.dr.getScreenshot()
         self.ourScData = self.ourScreenshot1.getRamImage()
@@ -233,7 +224,6 @@ class MainGame(ShowBase):
         self.previous_frame = self.numpyImg1
 
         self.runcount = 0
-
 
     def checkGhost(self, task):
         ghost = self.obstacle2GhostNP.node()
@@ -271,12 +261,10 @@ class MainGame(ShowBase):
 
             # print(self.numpyImg)
 
-
             # self.camera_one_np.reparentTo(self.player1NP)
             # MOVEMENT
             self.player1BulletCharContNode.setAngularMovement(omega)
             self.player1BulletCharContNode.setLinearMovement(speed, True)
-
 
             # print(self.player2NP.getPos())
 
@@ -300,7 +288,6 @@ class MainGame(ShowBase):
             # MOVEMENT
             self.player2BulletCharContNode.setAngularMovement(omega)
             self.player2BulletCharContNode.setLinearMovement(speed, True)
-
 
     def motionDetection(self, task):
 
@@ -344,10 +331,7 @@ class MainGame(ShowBase):
                 cv2.circle(self.framecopy, (self.cx, self.cy), 7, (0, 0, 255), -1)
                 cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-
-
-
-
+                self.cube.setPos(self.convertToScreen(self.cx, self.cy))
 
         self.previous_frame = self.current_frame
 
@@ -359,31 +343,28 @@ class MainGame(ShowBase):
         return task.cont
 
     def convertToScreen(self, x, y):
-        winWidth = self.win.getXSize()
-        winHeight= self.win.getYSize()
+        winWidth = self.dr2.getPixelWidth()
+        winHeight= self.dr2.getPixelHeight()
 
-        # print(winHeight, winWidth)
-        # print(winHeight, winWidth)
-
+        print(winHeight, winWidth)
+        print(winHeight, winWidth)
 
         self.screenpointX = (self.cx * 1)/winWidth
 
         self.screenpointY = (self.cy * 1)/winHeight
 
         self.screenPoints = (self.screenpointX, 0, self.screenpointY)
-        # print(self.screenPoints)
+        print(self.screenPoints)
         return self.screenPoints
-
-
 
     def update(self, task):
         dt = globalClock.getDt()
 
         self.processInput(dt)
         self.bullet_world.doPhysics(dt, 4, 1. / 240.)
-        self.move+=0.002
-        #
-        self.cube.setX(self.move)
+        # self.move+=0.002
+        # #
+        # self.cube.setX(self.move)
 
         return task.cont
 
