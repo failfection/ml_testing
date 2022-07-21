@@ -8,12 +8,15 @@ from panda3d.physics import *
 import numpy as np
 import cv2
 from direct.gui.OnscreenImage import OnscreenImage
+from pandac.PandaModules import loadPrcFileData
 
 confvars = """
 
 cursor-hidden true
 
 """
+# loadPrcFileData("", "want-directtools #t")
+# loadPrcFileData("", "want-tk #t")
 
 load_prc_file_data("", confvars)
 
@@ -108,6 +111,8 @@ class MainGame(ShowBase):
 
         # Create a pair of offscreen buffers for each player/ball
 
+        # VERY IMPORTANT LINE OF CODE BELOW ( camNode.setActive(0) ) disables main camera so we can use multiple cameras
+
         self.camNode.setActive(0)
 
         # CAM 1
@@ -123,7 +128,7 @@ class MainGame(ShowBase):
         self.cam1.setPos(0, 0, 3)
 
         # Create a pair of cards to display the contents of these buffer
-        self.camera_one_Card = CardMaker('left')
+        self.camera_one_Card = CardMaker('cam1 Card')
         self.camera_one_Card.setFrame(-1, 1, -1, 1)
         self.camera_one_Card.setColor(1, 1, 1, 0.5)
         self.camera_one_CardNP = self.render.attachNewNode(self.camera_one_Card.generate())
@@ -141,7 +146,7 @@ class MainGame(ShowBase):
 
         # Create a pair of cards to display the contents of these buffer
         # overlayed with the main window.
-        self.camera_two_Card = CardMaker('right')
+        self.camera_two_Card = CardMaker('cam2 Card')
         self.camera_two_Card.setFrame(-1, 1, -1, 1)
         self.camera_two_Card.setColor(1, 1, 1, 0.5)
         self.camera_two_CardNP = self.render.attachNewNode(self.camera_two_Card.generate())
@@ -155,25 +160,17 @@ class MainGame(ShowBase):
 
 
         #Choose Which Camera is associated with the Display Region
-        self.dr = self.win.makeDisplayRegion(0, 0.5, 0.5, 1)
+        self.dr = self.win.getDisplayRegion(1)
         self.dr.setCamera(self.cam1)
 
-        #self.dr.setCamera(self.cam1)
-        # self.makeCamera(self.win, displayRegion=(0,1,0,1))
-
-        self.camNode.setActive(0)
-
         # CUBE
-
         self.cube = self.loader.loadModel('models/my models/cube.bam')
         self.cube.setScale(0.010, 0.010, 0.010)
-        # self.cube.reparentTo(self.render2dp)
-        # self.cube.setPos(0, 0, 0)
 
         #RENDER 2D
                                         # start, end, start, end
         # self.dr2 = self.win.makeDisplayRegion(L, R, B, T)
-        self.dr2 = self.win.makeDisplayRegion(0.5, 1, 0, 1)
+        self.dr2 = self.win.getDisplayRegion(2)
         self.dr2.sort = 20
 
         self.myCamera2d = NodePath(Camera('myCam2d'))
@@ -198,8 +195,6 @@ class MainGame(ShowBase):
         self.mouse_y = 0
         self.playerspeed = 20
         self.leftValue = 0
-        self.screenpointX = 0
-        self.screenpointY = 0
         self.cx = 0
         self.cy = 0
         self.move = 0.00
@@ -224,6 +219,19 @@ class MainGame(ShowBase):
         self.previous_frame = self.numpyImg1
 
         self.runcount = 0
+
+
+        # print("Display Regions ", self.win.getDisplayRegions())
+        # self.win.removeDisplayRegion(self.win.getDisplayRegion(1))
+        # self.win.removeDisplayRegion(self.win.getDisplayRegion(1))
+        # self.win.removeDisplayRegion(self.win.getDisplayRegion(1))
+        print(len(self.win.getDisplayRegions()))
+        # print("Display Regions ", self.win.getDisplayRegions())
+        print("cam1 display regions" , self.cam1.node().display_regions)
+        print("cam2 display regions" , self.cam2.node().display_regions)
+        print("myCamera2d display regions" , self.myCamera2d.node().display_regions)
+
+
 
     def checkGhost(self, task):
         ghost = self.obstacle2GhostNP.node()
@@ -254,10 +262,13 @@ class MainGame(ShowBase):
         # if inputState.isSet('detectObject'):
 
         if self.isPLayer1Active == True:
+            # getdr = self.win.getActiveDisplayRegion(1)
+            # getdr.setActive(1)
+
             # CAMERA
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            # self.dr.setCamera(self.cam1)
+            # self.win.getActiveDisplayRegion(1).setActive(1)
 
             # print(self.numpyImg)
 
@@ -282,7 +293,7 @@ class MainGame(ShowBase):
             # CAMERA
             self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
             self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            self.dr.setCamera(self.cam2)
+            # self.dr.setCamera(self.cam2)
 
             # self.camera_one_np.reparentTo(self.player2NP)
             # MOVEMENT
@@ -324,17 +335,23 @@ class MainGame(ShowBase):
                 1, (0, 0, 255), 3)
 
             M = cv2.moments(contour)
-            if M['m00'] != 0:
-                self.cx = int(M['m10'] / M['m00'])
-                self.cy = int(M['m01'] / M['m00'])
-                cv2.drawContours(self.framecopy, [contour], -1, (0, 255, 0), 1)
-                cv2.circle(self.framecopy, (self.cx, self.cy), 7, (0, 0, 255), -1)
-                cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                self.cube.setPos(self.convertToScreen(self.cx, self.cy))
 
+            self.cx = int(M["m10"] / M["m00"])
+            self.cy = int(M["m01"] / M["m00"])
+            # draw the contour and center of the shape on the image
+            # cv2.drawContours(self.framecopy, [contour], -1, (0, 255, 0), 2)
+            cv2.circle(self.framecopy, (self.cx, self.cy), 7, (255, 255, 255), -1)
+            cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+            # print("screen width",  self.win.getXSize())
+            # print("dr width",  self.dr.getPixelWidth())
+            # print("dr height",  self.dr.getPixelHeight())
+            # print("ball X ",  self.cx)
+            # print("ball Y ",  self.cy)
+
+        self.cube.setPos(self.convertToScreen(self.cx, self.cy))
         self.previous_frame = self.current_frame
-
         cv2.imshow('hi', self.framecopy)
         if cv2.waitKey(1) == ord('q'):
             cv2.destroyAllWindows()
@@ -343,18 +360,18 @@ class MainGame(ShowBase):
         return task.cont
 
     def convertToScreen(self, x, y):
+
         winWidth = self.dr2.getPixelWidth()
         winHeight= self.dr2.getPixelHeight()
+        #
+        # print("winHeight=", winHeight, "winWidth= ", winWidth)
+        # print("cx=", self.cx, " cy=", self.cy)
 
-        print(winHeight, winWidth)
-        print(winHeight, winWidth)
-
-        self.screenpointX = (self.cx * 1)/winWidth
-
-        self.screenpointY = (self.cy * 1)/winHeight
+        self.screenpointX = ( (self.cx) / winWidth * 2) - 1
+        self.screenpointY = ( (self.cy) / winHeight * 2) - 1
 
         self.screenPoints = (self.screenpointX, 0, self.screenpointY)
-        print(self.screenPoints)
+        # print(self.screenPoints)
         return self.screenPoints
 
     def update(self, task):
@@ -362,9 +379,6 @@ class MainGame(ShowBase):
 
         self.processInput(dt)
         self.bullet_world.doPhysics(dt, 4, 1. / 240.)
-        # self.move+=0.002
-        # #
-        # self.cube.setX(self.move)
 
         return task.cont
 
