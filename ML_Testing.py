@@ -12,7 +12,9 @@ confvars = """
 
 cursor-hidden true
 
+
 """
+# win-size 800 600
 
 load_prc_file_data("", confvars)
 
@@ -20,6 +22,7 @@ load_prc_file_data("", confvars)
 class MainGame(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+
         self.disableMouse()
         self.bullet_world = BulletWorld()
         self.bullet_world.setGravity(Vec3(0, 0, -9.81))
@@ -29,7 +32,7 @@ class MainGame(ShowBase):
         self.debug.showWireframe(True)
         self.debug.showConstraints(True)
         self.debugNP = self.render.attachNewNode(self.debug)
-        self.debugNP.setColor(3,4,2,1)
+        self.debugNP.setColor(3, 4, 2, 1)
         # self.debugNP.show()
         self.bullet_world.setDebugNode(self.debugNP.node())
 
@@ -103,7 +106,7 @@ class MainGame(ShowBase):
         self.obstacle2GhostNP.setCollideMask(BitMask32(0x0f))
         self.bullet_world.attachGhost(self.obstacle2Ghost)
         self.obstacle2.reparentTo(self.obstacle2GhostNP)
-        self.obstacle2GhostNP.setPos(1,15, 1)
+        self.obstacle2GhostNP.setPos(1, 15, 1)
         self.obstacle2GhostNP.setColor(1, 2, 4, 3)
 
         # CUBE
@@ -113,53 +116,45 @@ class MainGame(ShowBase):
 
         # Create a pair of offscreen buffers for each player/ball
 
-        #CREATING MAIN CAMERA TO DISPLAY EVERYTHING (open cv will only display buffer one)
-        self.mainCamera = Camera('mainCamera')
-        self.mainCameraNP = NodePath(self.mainCamera)
-
-        # VERY IMPORTANT LINE OF CODE BELOW ( camNode.setActive(0) ) disables main camera so we can use multiple cameras
-
-        self.camNode.setActive(0)
-
         # CAM 1
         # Create Texture
         # Make Texture Buffer from Texture above and save to ram
         # Set Buffer Sort with setSort
-        # Make camera from buffer with dispplay region
+        # Make camera from buffer with display region
+        # Render Frame
         # re-parent and setPos (Optional)
 
+        # BUFFER 1
         self.myTexture1 = Texture()
-        self.camera_one_buffer = self.win.makeTextureBuffer('buffer_one', self.win.getXSize(), self.win.getYSize(),  self.myTexture1, to_ram=True)
+        """ using self.win.getXSize() for the buffer so it is always same size as the main window. 
+                so its easier for center point translation"""
+        self.camera_one_buffer = self.win.makeTextureBuffer('buffer_one', self.win.getXSize(), self.win.getYSize(),
+                                                            self.myTexture1, to_ram=True)
         self.camera_one_buffer.setSort(-100)
-        """ Open CV's window size will be that of the display Region. So keep that in mind when calculating for
-                tracker positioning if smaller than main 800 x 600 window calculate differently """
+
         self.cam1 = self.makeCamera(self.camera_one_buffer, displayRegion=(0, 1, 0, 1))
         self.cam1.reparentTo(self.player1NP)
         self.cam1.setPos(0, 0, 3)
-        self.mainCameraNP.reparentTo(self.player1NP)
-        self.mainCameraNP.setPos(0, 0, 3)
+        self.cam.reparentTo(self.player1NP)
+        self.cam.setPos(0, 0, 3)
 
-
-        # CAM 2
-
+        # BUFFER 2
         self.myTexture2 = Texture()
-        self.camera_two_buffer = self.win.makeTextureBuffer('buffer_two', 800, 600, self.myTexture2, to_ram=True)
+        """ using self.win.getXSize() for the buffer so it is always same size as the main window. 
+        so its easier for center point translation"""
+        self.camera_two_buffer = self.win.makeTextureBuffer('buffer_two', self.win.getXSize(), self.win.getYSize(),
+                                                            self.myTexture2, to_ram=True)
         self.camera_two_buffer.setSort(-500)
-        """ Open CV's window size will be that of the display Region. So keep that in mind when calculating for
-        tracker positioning if smaller than main 800 x 600 window calculate differently """
+
         self.cam2 = self.makeCamera(self.camera_two_buffer, displayRegion=(0, 1, 0, 1))
         self.cam2.reparentTo(self.player2NP)
         self.cam2.setPos(0, -20, 3)
 
         self.graphicsEngine.renderFrame()
 
-
-
-        # Question, will camera position set for objects affect anything later?
-
+        print(self.camera_one_buffer.getActiveDisplayRegions())
 
         # print(self.cube_buffer.getActiveDisplayRegions())
-        print(self.camera_one_buffer.getActiveDisplayRegions())
         # self.cube_buffer.getActiveDisplayRegion(0).saveScreenshotDefault('lets see cube')
 
         #----------------------------------------------------------------------------------------#
@@ -177,16 +172,12 @@ class MainGame(ShowBase):
         print('Number Of Display Regions')
         print(self.win.getNumDisplayRegions(), "\n")
 
-
-        #Testing 2D render
-
-
+        self.dr = self.win.makeDisplayRegion()
 
 
         #RENDER 2D
                                         # start, end, start, end
         # self.dr2 = self.win.makeDisplayRegion(L, R, B, T)
-        self.dr = self.win.makeDisplayRegion()
         # self.dr2.sort = 20
         # self.myCamera2d = Camera('myCam2d')
         # self.myCamera2dNP = NodePath(self.myCamera2d)
@@ -239,10 +230,6 @@ class MainGame(ShowBase):
 
         self.previous_frame = self.numpyImg1
 
-        self.runcount = 0
-
-
-
     def checkGhost(self, task):
         ghost = self.obstacle2GhostNP.node()
         if ghost.getNumOverlappingNodes():
@@ -265,30 +252,18 @@ class MainGame(ShowBase):
         if inputState.isSet('turnLeft'):  omega = 20.0
         if inputState.isSet('turnRight'): omega = -20.0
         if inputState.isSet('switchPlayer'):
-            if self.isPLayer1Active == True:
-                self.isPLayer1Active = False;
-            elif self.isPLayer1Active == False:
-                self.isPLayer1Active = True;
+            if self.isPLayer1Active:
+                self.isPLayer1Active = False
+            elif not self.isPLayer1Active:
+                self.isPLayer1Active = True
         # if inputState.isSet('detectObject'):
 
-        if self.isPLayer1Active == True:
-            # getdr = self.win.getActiveDisplayRegion(1)
-            # getdr.setActive(1)
-            self.dr.setCamera(self.mainCameraNP)
+        if self.isPLayer1Active:
+            self.dr.setCamera(self.cam)
 
-            # CAMERA
-            # self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            # self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            # self.win.getActiveDisplayRegion(1).setActive(1)
-
-            # print(self.numpyImg)
-
-            # self.camera_one_np.reparentTo(self.player1NP)
             # MOVEMENT
             self.player1BulletCharContNode.setAngularMovement(omega)
             self.player1BulletCharContNode.setLinearMovement(speed, True)
-
-            # print(self.player2NP.getPos())
 
             self.leftValue += (1*dt)
 
@@ -355,20 +330,10 @@ class MainGame(ShowBase):
                 cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                 self.cube.setPos(self.convertToScreen(self.cx, self.cy))
-
-            # print("screen width",  self.win.getXSize())
-            # print("dr width",  self.dr.getPixelWidth())
-            # print("dr height",  self.dr.getPixelHeight())
-            # print("ball X ",  self.cx)
-            # print("ball Y ",  self.cy)
-
-            # print("cam1 display regions", self.cam1.node().display_regions)
-            # print("cam2 display regions", self.cam2.node().display_regions)
-            # print("myCamera2d display regions", self.myCamera2d.node().display_regions)
-
+                # self.cube.setPos(-1,0,0)
 
         self.previous_frame = self.current_frame
-        cv2.imshow('hi', self.framecopy)
+        cv2.imshow('OpenCV', self.framecopy)
         if cv2.waitKey(1) == ord('q'):
             cv2.destroyAllWindows()
             return
@@ -377,28 +342,18 @@ class MainGame(ShowBase):
 
     def convertToScreen(self, x, y):
 
-        winWidth = self.dr.getPixelWidth()
-        winHeight = self.dr.getPixelHeight()
+        winWidth = self.win.getXSize()
+        winHeight = self.win.getYSize()
 
-        drWidth = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelWidth()
-        drHeight = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelHeight()
-        #
+        # drWidth = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelWidth()
+        # drHeight = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelHeight()
+
         # print("winHeight=", winHeight, "winWidth= ", winWidth)
-        # print("drHeight=", drHeight, "drWidth= ", drWidth)
         # print("cx=", self.cx, " cy=", self.cy)
 
-        widthNumerator = (self.cx) * winWidth
-        widthDenominator = drWidth
-
-        heightNumerator = (self.cy) * winHeight
-        heighDenominator = drHeight
-
-        # self.screenpointX = widthNumerator / widthDenominator
-        # self.screenpointY = heightNumerator / heighDenominator
         #
-        self.screenpointX = ( (self.cx) / drWidth * 2) - 1
-        self.screenpointY = ( (self.cy) / drHeight * 2) - 1
-        # print("new cx=", self.screenpointX,  " new cy=", self.screenpointY)
+        self.screenpointX = ( (self.cx) / winWidth * 2) - 1
+        self.screenpointY = ( (self.cy) / winHeight) - 0.85
 
         self.screenPoints = (self.screenpointX, 0, self.screenpointY)
 
