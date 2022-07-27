@@ -1,53 +1,164 @@
+from math import pi, sin, cos
 from direct.showbase.ShowBase import ShowBase
-from direct.showbase.ShowBaseGlobal import globalClock
-from panda3d.bullet import *
-from panda3d.core import *
+from panda3d.core import WindowProperties
+from direct.actor.Actor import Actor
+from panda3d.core import AmbientLight
+from panda3d.core import Vec4
+from panda3d.core import DirectionalLight
+from panda3d.core import Vec4, Vec3
+from panda3d.core import CollisionTraverser
+from panda3d.core import CollisionHandlerPusher
+from panda3d.core import CollisionSphere, CollisionNode
+from panda3d.core import CollisionTube
+from panda3d.core import Camera
+
+from panda3d.core import NodePath
+from panda3d.core import Filename
+from panda3d.core import GraphicsOutput
+
+import numpy as np
+from direct.task import Task
+# from opensimplex import OpenSimplex
+from panda3d.core import Texture
 
 
 class Game(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
 
-        self.bulletWorld = BulletWorld()
-        self.bulletWorld.setGravity(Vec3(0, 0, -9.81))
+        properties = WindowProperties()
+        properties.setSize(1000, 750)
 
-        self.debug = BulletDebugNode('debug')
-        self.debug.showWireframe(True)
-        self.debug.showBoundingBoxes(True)
-        self.debug.showNormals(True)
-        self.debug.showConstraints(True)
-        self.debugNP = self.render.attachNewNode(self.debug)
-        self.bulletWorld.setDebugNode(self.debugNP.node())
-        self.debugNP.show()
+        self.disableMouse()
+        self.environment = loader.loadModel("models/environment")
+        self.environment.reparentTo(render)
 
-        self.playermodel = self.loader.loadModel('models/my models/sphere.bam')
-        self.sphereShape = BulletSphereShape(2)
-        self.playerCharCont = BulletCharacterControllerNode(self.sphereShape, 4, 'playerCC')
-        self.bulletWorld.attachCharacter(self.playerCharCont)
-        self.playerNP = self.render.attachNewNode(self.playerCharCont)
-        self.playerNP.setCollideMask(BitMask32.allOn())
-        self.playerNP.setPos(0, 40, 10)
-        self.playermodel.reparentTo(self.playerNP)
+        """ In this block I create a textureBuffer and create camera 
+        on that buffer that its display region is upper right corner of the window
+        I use that region to create saveScreenShot xxxx or create a numpy array out of it
+        (numpy_image_data) 
+        second try is to make a screenshot directly from the buffer which is not so important
+        Both works though """
+        self.useTrackball()
+        ambientLight = AmbientLight("ambient light")
+        ambientLight.setColor(Vec4(0.2, 0.2, 0.2, 1))
+        self.ambientLightNodePath = render.attachNewNode(ambientLight)
+        render.setLight(self.ambientLightNodePath)
+        # In the body of your code
+        mainLight = DirectionalLight("main light")
+        self.mainLightNodePath = render.attachNewNode(mainLight)
+        # Turn it around by 45 degrees, and tilt it down by 45 degrees
+        self.mainLightNodePath.setHpr(45, -45, 0)
+        render.setLight(self.mainLightNodePath)
+        render.setShaderAuto()
 
-        self.ground = self.loader.loadModel('models/my models/ground.bam')
-        self.planeShape = BulletPlaneShape(Vec3(0, 0, 1), 3)
-        self.planeRigidbody = BulletRigidBodyNode('ground')
-        self.planeRigidbody.add_shape(self.planeShape)
-        self.bulletWorld.attachRigidBody(self.planeRigidbody)
-        self.groundNP = self.render.attachNewNode(self.planeRigidbody)
-        self.ground.reparentTo(self.groundNP)
-        self.groundNP.setPos(0, 0, -20)
+        self.tempActor2 = Actor("models/my models/cube.bam")
+        self.tempActor2.reparentTo(render)
+        self.tempActor2.setPos(-5, 3, 0)
 
-        self.taskMgr.add(self.update)
+        self.monkey = Actor("models/frowney")
+        self.monkey.set_scale(.25)
+        self.monkey.reparentTo(render)
+        self.monkey.set_pos(3, 0, 2)
+        self.monkey.lookAt(self.tempActor2)
 
-        # UPDATE
-    def update(self, task):
-        dt = globalClock.getDt()
-        self.bulletWorld.doPhysics(dt)
-        return task.cont
+        self.monkey2 = Actor("models/frowney")
+        self.monkey2.set_scale(.25)
+        self.monkey2.reparentTo(render)
+        self.monkey2.set_pos(0, 3, 1)
+        self.monkey2.lookAt(self.tempActor2)
 
+        tex = Texture()
+        mybuffer = self.win.makeTextureBuffer("My Buffer", 512, 512, tex, to_ram=True)
+        mybuffer.setSort(-100)
+        mycamera = self.makeCamera(mybuffer, displayRegion=(.5, 1, .5, 1))
+        mycamera.reparentTo(self.monkey)
 
-thisgame = Game().run()
+        tex2 = Texture()
+        mybuffer2 = self.win.makeTextureBuffer("My Buffer2", 512, 512, tex, to_ram=True)
+        mybuffer2.setSort(-500)
+        mycamera2 = self.makeCamera(mybuffer2, displayRegion=(0, .5, 0, .5))
+        mycamera2.reparentTo(self.monkey2)
+
+        self.graphicsEngine.renderFrame()
+
+        print(mybuffer.getActiveDisplayRegions())
+
+        save_it = mybuffer.getActiveDisplayRegion(0).saveScreenshotDefault('1111')
+        my_output = mybuffer.getActiveDisplayRegion(0).getScreenshot()
+        numpy_image_data = np.array(my_output.getRamImageAs("RGB"), np.float32)
+
+        save_it2 = mybuffer2.getActiveDisplayRegion(0).saveScreenshotDefault('2222')
+        my_output2 = mybuffer2.getActiveDisplayRegion(0).getScreenshot()
+        numpy_image_data2 = np.array(my_output2.getRamImageAs("RGB"), np.float32)
+        print(numpy_image_data)
+
+        file_name = Filename.fromOsSpecific("save_gameDat_001.png")
+        mybuffer.saveScreenshot(file_name)
+        print('Cameras')
+        print(self.camList)
+        print('Number Of Display Regions')
+        print(self.win.getNumDisplayRegions())
+        print('Active Display Regions')
+        print(self.win.getActiveDisplayRegions())
+
+        print(self.win.getDisplayRegions())
+
+        print('Number Of Display Regions')
+        print(self.win.getNumDisplayRegions())
+
+newGame = Game()
+newGame.run()
+# from direct.showbase.ShowBase import ShowBase
+# from direct.showbase.ShowBaseGlobal import globalClock
+# from panda3d.bullet import *
+# from panda3d.core import *
+#
+#
+# class Game(ShowBase):
+#     def __init__(self):
+#         ShowBase.__init__(self)
+#
+#         self.bulletWorld = BulletWorld()
+#         self.bulletWorld.setGravity(Vec3(0, 0, -9.81))
+#
+#         self.debug = BulletDebugNode('debug')
+#         self.debug.showWireframe(True)
+#         self.debug.showBoundingBoxes(True)
+#         self.debug.showNormals(True)
+#         self.debug.showConstraints(True)
+#         self.debugNP = self.render.attachNewNode(self.debug)
+#         self.bulletWorld.setDebugNode(self.debugNP.node())
+#         self.debugNP.show()
+#
+#         self.playermodel = self.loader.loadModel('models/my models/sphere.bam')
+#         self.sphereShape = BulletSphereShape(2)
+#         self.playerCharCont = BulletCharacterControllerNode(self.sphereShape, 4, 'playerCC')
+#         self.bulletWorld.attachCharacter(self.playerCharCont)
+#         self.playerNP = self.render.attachNewNode(self.playerCharCont)
+#         self.playerNP.setCollideMask(BitMask32.allOn())
+#         self.playerNP.setPos(0, 40, 10)
+#         self.playermodel.reparentTo(self.playerNP)
+#
+#         self.ground = self.loader.loadModel('models/my models/ground.bam')
+#         self.planeShape = BulletPlaneShape(Vec3(0, 0, 1), 3)
+#         self.planeRigidbody = BulletRigidBodyNode('ground')
+#         self.planeRigidbody.add_shape(self.planeShape)
+#         self.bulletWorld.attachRigidBody(self.planeRigidbody)
+#         self.groundNP = self.render.attachNewNode(self.planeRigidbody)
+#         self.ground.reparentTo(self.groundNP)
+#         self.groundNP.setPos(0, 0, -20)
+#
+#         self.taskMgr.add(self.update)
+#
+#         # UPDATE
+#     def update(self, task):
+#         dt = globalClock.getDt()
+#         self.bulletWorld.doPhysics(dt)
+#         return task.cont
+#
+#
+# thisgame = Game().run()
 
 # from direct.showbase.InputStateGlobal import inputState
 # from direct.showbase.ShowBase import ShowBase
