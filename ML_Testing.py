@@ -7,11 +7,12 @@ from panda3d.bullet import *
 from panda3d.physics import *
 import numpy as np
 import cv2
+from direct.gui.OnscreenImage import OnscreenImage
+
 
 confvars = """
 
 cursor-hidden true
-
 
 """
 # win-size 800 600
@@ -110,9 +111,11 @@ class MainGame(ShowBase):
         self.obstacle2GhostNP.setColor(1, 2, 4, 3)
 
         # CUBE
-        self.cube = self.loader.loadModel('models/my models/cube.bam')
-        self.cube.setScale(0.010, 0.010, 0.010)
-        self.cube.reparentTo(self.render2d)
+        self.imageObject = OnscreenImage(image='black square.png')
+        self.imageObject.setScale(0.02, 0.02, 0.02)
+        # self.cube = self.loader.loadModel('models/my models/cube.bam')
+        # self.cube.setScale(0.010, 0.010, 0.010)
+        # self.cube.reparentTo(self.render2d)
 
         # Create a pair of offscreen buffers for each player/ball
 
@@ -155,7 +158,7 @@ class MainGame(ShowBase):
         print(self.camera_one_buffer.getActiveDisplayRegions())
 
         # print(self.cube_buffer.getActiveDisplayRegions())
-        # self.cube_buffer.getActiveDisplayRegion(0).saveScreenshotDefault('lets see cube')
+        # self.camera_one_buffer.getActiveDisplayRegion(0).saveScreenshotDefault('lets see cube')
 
         #----------------------------------------------------------------------------------------#
 
@@ -173,22 +176,25 @@ class MainGame(ShowBase):
         print(self.win.getNumDisplayRegions(), "\n")
 
         self.dr = self.win.makeDisplayRegion()
+        self.dr.setCamera(self.cam)
+
 
 
         #RENDER 2D
                                         # start, end, start, end
         # self.dr2 = self.win.makeDisplayRegion(L, R, B, T)
         # self.dr2.sort = 20
-        # self.myCamera2d = Camera('myCam2d')
-        # self.myCamera2dNP = NodePath(self.myCamera2d)
-        # self.myCamera2dNP.reparentTo(self.camera)
-        # self.myCamera2dNP.reparentTo(self.player1NP)
-        # self.myCamera2dNP.setPos(self.cam1.getPos())
-        # self.myCamera2dNP.setH(self.cam1.getH())
+        # self.myCamera2d = NodePath(Camera('myCam2d'))
         # self.lens = OrthographicLens()
         # self.lens.setFilmSize(2, 2)
         # self.lens.setNearFar(-1000, 1000)
         # self.myCamera2d.node().setLens(self.lens)
+        #
+        # self.myRender2d = NodePath('myRender2d')
+        # self.myRender2d.setDepthTest(False)
+        # self.myRender2d.setDepthWrite(False)
+        # self.myCamera2d.reparentTo(self.myRender2d)
+        # dr.setCamera(myCamera2d)
         #
         # self.myRender2d = NodePath('myRender2d')
         # self.myRender2d.setDepthTest(False)
@@ -210,6 +216,7 @@ class MainGame(ShowBase):
         self.cx = 0
         self.cy = 0
         self.move = 0.00
+        print("Aspect Ratio", self.getAspectRatio())
 
         # RUN UPDATE FUNCTIONS HERE
         self.taskMgr.add(self.MouseControl)
@@ -259,7 +266,9 @@ class MainGame(ShowBase):
         # if inputState.isSet('detectObject'):
 
         if self.isPLayer1Active:
-            self.dr.setCamera(self.cam)
+            self.cam.reparentTo(self.player1NP)
+            self.cam.setPos(0, 0, 3)
+            # print("CAMERA ASSOCIATED ", self.dr.getCamera().name)
 
             # MOVEMENT
             self.player1BulletCharContNode.setAngularMovement(omega)
@@ -277,9 +286,8 @@ class MainGame(ShowBase):
 
         else:
             # CAMERA
-            self.camera_two_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            self.camera_one_buffer.setClearColor(VBase4(0, 0, 0, 0))
-            # self.dr.setCamera(self.cam2)
+            self.cam.reparentTo(self.player2NP)
+            self.cam.setPos(0, 0, 3)
 
             # self.camera_one_np.reparentTo(self.player2NP)
             # MOVEMENT
@@ -315,7 +323,7 @@ class MainGame(ShowBase):
         for contour in contours:
             (x, y, w, h) = cv2.boundingRect(contour)
             # print("x=" + str(x) + " y=" + str(y))
-            if cv2.contourArea(contour) > 1200:
+            if cv2.contourArea(contour) > 1500:
                 cv2.rectangle(self.framecopy, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(self.framecopy, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
                 1, (0, 0, 255), 3)
@@ -329,8 +337,9 @@ class MainGame(ShowBase):
                 cv2.circle(self.framecopy, (self.cx, self.cy), 7, (255, 255, 255), -1)
                 cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                self.cube.setPos(self.convertToScreen(self.cx, self.cy))
-                # self.cube.setPos(-1,0,0)
+
+                self.imageObject.setPos(self.convertToScreen(self.cx, self.cy))
+
 
         self.previous_frame = self.current_frame
         cv2.imshow('OpenCV', self.framecopy)
@@ -345,17 +354,30 @@ class MainGame(ShowBase):
         winWidth = self.win.getXSize()
         winHeight = self.win.getYSize()
 
-        # drWidth = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelWidth()
-        # drHeight = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelHeight()
+        drWidth = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelWidth()
+        drHeight = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelHeight()
 
         # print("winHeight=", winHeight, "winWidth= ", winWidth)
+        # print("bufferHeight=", drHeight, "bufferWidth= ", drWidth)
         # print("cx=", self.cx, " cy=", self.cy)
 
-        #
-        self.screenpointX = ( (self.cx) / winWidth * 2) - 1
-        self.screenpointY = ( (self.cy) / winHeight) - 0.85
+        #  CALCULATING X VALUE
+        OldMaxX = winWidth
+        OldMinX = 0
+        NewMaxX = 1.3333
+        NewMinX = -1.3333
+        OldValueX = x
 
-        self.screenPoints = (self.screenpointX, 0, self.screenpointY)
+        OldRangeX = (OldMaxX - OldMinX)
+        NewRangeX = (NewMaxX - NewMinX)
+        newXvalue = (((OldValueX - OldMinX) * NewRangeX) / OldRangeX) + NewMinX
+
+        #  CALCULATING Y VALUE
+        oldY = drHeight - y
+        newYValue = (oldY / (winHeight / 2)) - 1
+        """dividing by 2 because if position is less than half the screen it needs to enter negative"""
+
+        self.screenPoints = (newXvalue, 0, newYValue)
 
         return self.screenPoints
 
