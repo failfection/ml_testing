@@ -8,6 +8,8 @@ from panda3d.physics import *
 import numpy as np
 import cv2
 from direct.gui.OnscreenImage import OnscreenImage
+import os
+from ConvertToScreenPoint import convertToScreen
 
 
 confvars = """
@@ -53,7 +55,7 @@ class MainGame(ShowBase):
         self.player1NP = self.render.attachNewNode(self.player1BulletCharContNode)
         self.player1NP.setCollideMask(BitMask32.allOn())
         self.player1NP.setColor(1, 1, 1, 1)
-        self.player1NP.setPos(0, -50, 20)
+        self.player1NP.setPos(0, -50, 1)
         self.player1.reparentTo(self.player1NP)
         self.player1.setPos(0, 0, -1)
         self.bullet_world.attachCharacter(self.player1BulletCharContNode)
@@ -65,7 +67,7 @@ class MainGame(ShowBase):
         self.player2NP = self.render.attachNewNode(self.player2BulletCharContNode)
         self.player2NP.setCollideMask(BitMask32.allOn())
         self.player2NP.setColor(1, 1, 1, 1)
-        self.player2NP.setPos(-10, 0, 20)
+        self.player2NP.setPos(-10, 0, 1)
         self.player2.reparentTo(self.player2NP)
         self.player2.setPos(0, 0, -1)
         self.bullet_world.attachCharacter(self.player2BulletCharContNode)
@@ -111,8 +113,25 @@ class MainGame(ShowBase):
         self.obstacle2GhostNP.setColor(1, 2, 4, 3)
 
         # CUBE
-        self.imageObject = OnscreenImage(image='black square.png')
-        self.imageObject.setScale(0.02, 0.02, 0.02)
+
+        self.blackSquareImage = OnscreenImage(image='black square.png')
+        self.blackSquareImage.setScale(0.02, 0.02, 0.02)
+
+        self.yellowSquareImage = OnscreenImage(image='yellow square.png')
+        self.yellowSquareImage.setScale(0.02, 0.02, 0.02)
+
+        self.yellowSquareImage2 = OnscreenImage(image='yellow square.png')
+        self.yellowSquareImage2.setScale(0.02, 0.02, 0.02)
+
+        self.yellowSquareImage3 = OnscreenImage(image='yellow square.png')
+        self.yellowSquareImage3.setScale(0.02, 0.02, 0.02)
+
+        self.yellowSquareImage4 = OnscreenImage(image='yellow square.png')
+        self.yellowSquareImage4.setScale(0.02, 0.02, 0.02)
+
+        self.RectangleOverObject = LineSegs()
+
+
         # self.cube = self.loader.loadModel('models/my models/cube.bam')
         # self.cube.setScale(0.010, 0.010, 0.010)
         # self.cube.reparentTo(self.render2d)
@@ -213,9 +232,14 @@ class MainGame(ShowBase):
         self.mouse_y = 0
         self.playerspeed = 20
         self.leftValue = 0
-        self.cx = 0
-        self.cy = 0
+        self.centerX = 0
+        self.centerY = 0
         self.move = 0.00
+        self.savedContours = []
+        self.arrayContourList = []
+        """using arrayContourList because we need to convert the arrayContour to list for comparison 
+                instead of arrayContour which is numpy array"""
+
         print("Aspect Ratio", self.getAspectRatio())
 
         # RUN UPDATE FUNCTIONS HERE
@@ -318,27 +342,52 @@ class MainGame(ShowBase):
         dilated = cv2.dilate(threshold, None, iterations=3)
         _, contours, _ = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        # cv2.drawContours(self.previous_frame, contours, -1, (0, 255, 0), 2)
+        arrayContour = contours
+
+        if len(self.savedContours)>0 and len(arrayContour)>0:
+            for item in self.savedContours:
+                for sub in item:
+                    for con in contours:
+                        if sub.all() == con.all():
+                            print("Found Something Similar")
+                        else:
+                            print("didnt find nothing")
+                            self.savedContours.append(arrayContour)
 
         for contour in contours:
+
             (x, y, w, h) = cv2.boundingRect(contour)
             # print("x=" + str(x) + " y=" + str(y))
             if cv2.contourArea(contour) > 1500:
+                cv2.drawContours(self.framecopy, contours, -1, (0, 255, 0), 2)
                 cv2.rectangle(self.framecopy, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(self.framecopy, "Status: {}".format('Movement'), (10, 20), cv2.FONT_HERSHEY_SIMPLEX,
                 1, (0, 0, 255), 3)
+                self.yellowSquareImage.setPos(convertToScreen(self, x + w, y + h))
+                self.yellowSquareImage2.setPos(convertToScreen(self, x, y))
+                self.yellowSquareImage3.setPos(convertToScreen(self, x + w, y))
+                self.yellowSquareImage4.setPos(convertToScreen(self, x, y + h))
 
-            M = cv2.moments(contour)
-            if M['m00'] != 0:
-                self.cx = int(M["m10"] / M["m00"])
-                self.cy = int(M["m01"] / M["m00"])
-                # draw the contour and center of the shape on the image
-                # cv2.drawContours(self.framecopy, [contour], -1, (0, 255, 0), 2)
-                cv2.circle(self.framecopy, (self.cx, self.cy), 7, (255, 255, 255), -1)
-                cv2.putText(self.framecopy, "center", (self.cx - 20, self.cy - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                # self.RectangleOverObject.moveTo(self.convertToScreen(x, y))
+                # self.RectangleOverObject.drawTo(self.convertToScreen(x + w, y + h))
+                # self.RectangleOverObject.setThickness(4)
+                # self.RectangleOverObjectNode = self.RectangleOverObject.create()
+                # self.RectangleOverObjectNodeNP = NodePath(self.RectangleOverObjectNode)
+                # self.RectangleOverObjectNodeNP.reparentTo(self.render)
 
-                self.imageObject.setPos(self.convertToScreen(self.cx, self.cy))
+                M = cv2.moments(contour)
+                if M['m00'] != 0:
+                    self.centerX = int(M["m10"] / M["m00"])
+                    self.centerY = int(M["m01"] / M["m00"])
+                    # draw the contour and center of the shape on the image
+                    # cv2.drawContours(self.framecopy, [contour], -1, (0, 255, 0), 2)
+                    cv2.circle(self.framecopy, (self.centerX, self.centerY), 7, (255, 255, 255), -1)
+                    cv2.putText(self.framecopy, "center", (self.centerX - 20, self.centerY - 20),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+                    self.blackSquareImage.setPos(convertToScreen(self, self.centerX, self.centerY))
+
+
 
 
         self.previous_frame = self.current_frame
@@ -349,37 +398,7 @@ class MainGame(ShowBase):
 
         return task.cont
 
-    def convertToScreen(self, x, y):
 
-        winWidth = self.win.getXSize()
-        winHeight = self.win.getYSize()
-
-        drWidth = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelWidth()
-        drHeight = self.camera_one_buffer.getActiveDisplayRegion(0).getPixelHeight()
-
-        # print("winHeight=", winHeight, "winWidth= ", winWidth)
-        # print("bufferHeight=", drHeight, "bufferWidth= ", drWidth)
-        # print("cx=", self.cx, " cy=", self.cy)
-
-        #  CALCULATING X VALUE
-        OldMaxX = winWidth
-        OldMinX = 0
-        NewMaxX = 1.3333
-        NewMinX = -1.3333
-        OldValueX = x
-
-        OldRangeX = (OldMaxX - OldMinX)
-        NewRangeX = (NewMaxX - NewMinX)
-        newXvalue = (((OldValueX - OldMinX) * NewRangeX) / OldRangeX) + NewMinX
-
-        #  CALCULATING Y VALUE
-        oldY = drHeight - y
-        newYValue = (oldY / (winHeight / 2)) - 1
-        """dividing by 2 because if position is less than half the screen it needs to enter negative"""
-
-        self.screenPoints = (newXvalue, 0, newYValue)
-
-        return self.screenPoints
 
     def update(self, task):
         dt = globalClock.getDt()
